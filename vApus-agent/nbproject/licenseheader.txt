@@ -1,0 +1,10 @@
+<#if licenseFirst??>
+${licenseFirst}
+</#if>
+${licensePrefix}Copyright 2014 (c) Sizing Servers Lab
+${licensePrefix}University College of West-Flanders, Department GKG${licensePrefix}
+${licensePrefix}Author(s):
+${licensePrefix}	Dieter Vandroemme
+<#if licenseLast??>
+${licenseLast}
+</#if>

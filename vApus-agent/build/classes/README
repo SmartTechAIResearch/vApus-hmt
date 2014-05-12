@@ -1,0 +1,92 @@
+Copyright 2014 (c) Sizing Servers Lab
+University College of West-Flanders, Department GKG * 
+Author(s):
+    Dieter Vandroemme
+
+Preface
+------------------------------
+All boilerplate code for Java based agents resides in be.sizingservers.vapus.agent in the vApus-agent project.
+It implements the communication protocol as stated in the Sizing Servers wiki: http://wiki.sizingservers.be/index.php/VApus-vApus-agent_communication_protocol
+
+You should also add vApus-agent-util and gson-2.2.4 to libraries.
+
+Important: These classes are coded against Java 6 for backwards compatibility reasons.
+
+1) Writing an agent
+------------------------------
+
+A good example is the vApus-dstat monitor.
+
+1.1) Classes
+------------------------------
+Basically you need three classes (+ your own helper classes):
+    A monitor class: Extend from be.sizingservers.vapus.agent.Monitor.
+                     Most work must be done here because getting counters is obviously very monitor-type specific.
+                     Since entities (for instance, a computer), headers and counters need to be gson formatted, serialize an instance of be.sizingservers.util.Entities. 
+                     Make sure you do not have shared data with other monitor instances.
+    
+    A server class:  Extend from be.sizingservers.vapus.agent.Server and implement getNewMonitor(...).
+                     This returns a new monitor that is used in the super class.
+                     In the super class resides a simple TCP (IPv4/IPv6) server socket.
+                     It provides a monitor instance per connection.
+    
+    An agent class:  The main entry point of the application. 
+                     Combines a server with an agent. 
+                     Extend from be.sizingservers.vapus.agent.Agent and call the super.main(...) in the main fx.
+
+
+1.2) .properties files
+------------------------------
+You need 2 .properties files.
+
+Add a vApus-agent.properties to the default package. Use following as a template:
+
+    # Copyright 2014 (c) Sizing Servers Lab
+    # University College of West-Flanders, Department GKG
+    #
+    # Author(s):
+    # 	<insert your name here>
+    
+    # None of following properties can be ommited.
+    
+    # The name of the monitor.
+    name=vApus-dstat
+    
+    #The version of this monitor.
+    version=0.1
+    
+    copyright=Copyright 2014 (c) Sizing Servers Lab\nUniversity College of West-Flanders, Department GKG
+    
+    #The port the server will listen at.
+    defaultPort=5556
+    
+    #The interval that counters are sent to the client in milliseconds.
+    sendCountersInterval=1000
+
+    # Can be . or , depending on for example the locale. This is purely for parsing decimal values client-side.
+    decimalSeparator=.
+
+Add a logging.properties to the default package. Use following as a template:
+
+    # Copyright 2014 (c) Sizing Servers Lab
+    # University College of West-Flanders, Department GKG
+    #
+    # Author(s):
+    # 	Dieter Vandroemme
+    
+    # Execute locate logging.properties for example (default properties in jdk).
+    
+    handlers= java.util.logging.FileHandler, java.util.logging.ConsoleHandler
+    
+    # Global logging level.
+    .level= SEVERE
+    
+    # Outputs in the apps dir. u% == unique number.
+    java.util.logging.FileHandler.pattern = vApus-dstat%u.log
+    java.util.logging.FileHandler.limit = 50000
+    java.util.logging.FileHandler.count = 1
+    
+    # Other formatters, like XMLFormatter, are possible. This outputs to flat file.
+    java.util.logging.FileHandler.formatter = java.util.logging.SimpleFormatter
+    
+    java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter

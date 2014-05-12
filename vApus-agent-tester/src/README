@@ -1,0 +1,8 @@
+Copyright 2014 (c) Sizing Servers Lab
+University College of West-Flanders, Department GKG * 
+Author(s):
+    Dieter Vandroemme
+
+This project serves at functionality testing an agent implemented using the vApus-agent package be.sizingservers.vapus.agent.
+The agent must use the communication protocol as in the README of the vApus-agent project and on the Sizing Servers wiki: http://wiki.sizingservers.be/index.php/VApus-vApus-agent_communication_protocol
+Fill in the fields in vApus-agent-tester.properties to customize the test. Best practices can be found in that file.
