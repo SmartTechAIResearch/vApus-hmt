@@ -1,18 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
+﻿/*
+ * Copyright 2014 (c) Sizing Servers Lab
+ * University College of West-Flanders, Department GKG
+ * 
+ * Author(s):
+ *    Dieter Vandroemme
+ */
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HMTProxy {
     public class HMTProxy {
         private static string _resolvePath;
-        private static int _logicalCores, _logicalCoresPerGroup, _physicalCores, _packages;
+        private static int _logicalCores, _logicalCoresPerPackage, _physicalCores, _packages;
+
+        private static uint _msrEAX, _msrEDX;
 
         /// <summary>
         /// Sets the resolve path and installs the winring0 driver
@@ -21,10 +26,12 @@ namespace HMTProxy {
         [RGiesecke.DllExport.DllExport]
         public static void init(string resolvePath) {
             if (_resolvePath == null) {
+                _resolvePath = resolvePath;
                 AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-                Process.Start(Path.Combine(resolvePath, "installdriver.exe"), "-installonly");
+                Process.Start(Path.Combine(_resolvePath, "installdriver.exe"), "-installonly");
+
+                Ring0.Open();
             }
-            _resolvePath = resolvePath;
         }
 
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args) {
@@ -43,145 +50,26 @@ namespace HMTProxy {
             return null;
         }
 
-        /// <summary>
-        /// Read 64 bit.
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="core">Set thread affinity.</param>
-        /// <returns></returns>
         [RGiesecke.DllExport.DllExport]
-        public static ulong readMSR(uint msr, int core) {
-            setCoreAffinity(core);
-            return readMSR(msr);
-        }
-
-        /// <summary>
-        /// Read 64 bit.
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="core">Set thread affinity.</param>
-        /// <returns></returns>
-        [RGiesecke.DllExport.DllExport]
-        public static ulong readMSR(uint msr) {
-            return readMSR(msr, 64, 0);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="highBit"></param>
-        /// <param name="lowBit"></param>
-        /// <param name="core">Set thread affinity.</param>
-        /// <returns></returns>
-        [RGiesecke.DllExport.DllExport]
-        public static ulong readMSR(uint msr, int highBit, int lowBit, int core) {
-            setCoreAffinity(core);
-            return readMSR(msr, highBit, lowBit);
-        }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="highBit"></param>
-        /// <param name="lowBit"></param>
-        /// <returns></returns>
-        [RGiesecke.DllExport.DllExport]
-        public static ulong readMSR(uint msr, int highBit, int lowBit) {
-            uint eax, edx;
-            if (Ring0.Rdmsr(msr, out eax, out edx)) {
-                ulong value = ((ulong)edx << 32 | eax);
-
-                //check if we need to do some parsing of bits to get what we want
-                if (highBit == 64 && lowBit == 0)
-                    return value;
-
-                //construct the ulong with the bits we're interested in
-                ulong bits = 0;
-                for (int i = lowBit; i < highBit; i++)
-                    bits += (ulong)Math.Pow(2, i);
-
-                ulong interestedValue = (value & bits) >> lowBit;
-
-                return interestedValue;
-            }
-            return 0;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="value"></param>
-        /// <param name="core">Set thread affinity.</param>
-        /// <returns>error if any</returns>
-        [RGiesecke.DllExport.DllExport]
-        public static string writeMSR(uint msr, ulong value, int core) {
-            setCoreAffinity(core);
-            return writeMSR(msr, value);
-        }
-        /// <summary>
-        /// </summary>
-        /// <param name="msr"></param>
-        /// <param name="value"></param>
-        /// <returns>error if any</returns>
-        [RGiesecke.DllExport.DllExport]
-        public static string writeMSR(uint msr, ulong value) {
-            string error = string.Empty;
-
-            uint eax, edx;
-
-            edx = (uint)(value >> 32);
-            eax = (uint)(value - ((ulong)edx << 32));
-
-            if (!Ring0.Wrmsr(msr, eax, edx)) {
-                error = "Error while writing to MSR 0x" + msr.ToString("X8") + " (" + msr + ")";
-
-                try {
-                    ulong errorCode = Ring0.GetLastError();
-                    error += "\nWin32Exception 0x" + errorCode.ToString("X8") + " (" + errorCode + "): " + (new Win32Exception((int)errorCode)).Message;//error codes http://msdn.microsoft.com/en-us/library/cc231199.aspx
-                } catch { }
-
-                error += "\nIf you get all counters there should not be a problem.";
-            }
-            return error;
+        public static int getLogicalCores() {
+            if (_logicalCores == 0) _logicalCores = Convert.ToInt32(GetActiveProcessorCount(0xFFFF)); //to include all processor groups
+            return _logicalCores;
         }
 
         [RGiesecke.DllExport.DllExport]
-        public static uint getPciAddress(byte bus, byte device, byte function) {
-            return Ring0.GetPciAddress(bus, device, function);
-        }
-
-        [RGiesecke.DllExport.DllExport]
-        public static bool readPciConfig(uint pciAddress, uint regAddress, out uint value) {
-            return Ring0.ReadPciConfig(pciAddress, regAddress, out value);
-        }
-
-        [RGiesecke.DllExport.DllExport]
-        public static bool writePciConfig(uint pciAddress, uint regAddress, uint value) {
-            return Ring0.WritePciConfig(pciAddress, regAddress, value);
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="core">Zero-based</param>
-        private static void setCoreAffinity(int core) {
-            var process = Process.GetCurrentProcess();
-            var affinity = new IntPtr((long)Math.Pow(2, core));
-            if (process.ProcessorAffinity != affinity)
-                process.ProcessorAffinity = affinity;
+        public static int getLogicalCoresPerPackage() {
+            if (_logicalCoresPerPackage == 0) _logicalCoresPerPackage = Convert.ToInt32(GetActiveProcessorCount(0)); //The same for all groups.
+            return _logicalCoresPerPackage;
         }
 
         [RGiesecke.DllExport.DllExport]
         public static int getPhysicalCores() {
-            if (_physicalCores == 0)
-                DetermineNumberOfPhysicalCoresAndPackages();
+            if (_physicalCores == 0) DetermineNumberOfPhysicalCoresAndPackages();
             return _physicalCores;
         }
         [RGiesecke.DllExport.DllExport]
         public static int getPackages() {
-            if (_packages == 0)
-                DetermineNumberOfPhysicalCoresAndPackages();
+            if (_packages == 0) DetermineNumberOfPhysicalCoresAndPackages();
             return _packages;
         }
 
@@ -196,27 +84,155 @@ namespace HMTProxy {
             }
         }
 
-        [RGiesecke.DllExport.DllExport]
-        public static int getLogicalCores() {
-            if (_logicalCores == 0)
-                _logicalCores = Convert.ToInt32(GetActiveProcessorCount(0xFFFF)); //to include all processor groups
-            return _logicalCores;
-        }
 
         [RGiesecke.DllExport.DllExport]
-        public static int getLogicalCoresPerGroup() {
-            if (_logicalCoresPerGroup == 0)
-                _logicalCoresPerGroup = Convert.ToInt32(GetActiveProcessorCount(0)); //The same for all groups.
-            return _logicalCoresPerGroup;
+        public static uint getMSREAX() { return _msrEAX; }
+
+        [RGiesecke.DllExport.DllExport]
+        public static uint getMSREDX() { return _msrEDX; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="msr"></param>
+        /// <param name="highBit"></param>
+        /// <param name="lowBit"></param>
+        /// <param name="core">Set thread affinity.</param>
+        /// <returns></returns>
+        [RGiesecke.DllExport.DllExport]
+        public static string readMSRTx(uint msr, int highBit, int lowBit, int core) {
+            SetCoreAffinity(core);
+            return sharedReadMSR(msr, highBit, lowBit);
         }
 
         /// <summary>
-        /// to know how much cores a group contains
         /// </summary>
-        /// <param name="groupNumber">the group number if any, or ALL_PROCESSOR_GROUPS (0xffff) for every group</param>
+        /// <param name="msr"></param>
+        /// <param name="highBit"></param>
+        /// <param name="lowBit"></param>
         /// <returns></returns>
-        [DllImport("kernel32.dll")]
-        private static extern uint GetActiveProcessorCount(ushort groupNumber);
+        [RGiesecke.DllExport.DllExport]
+        public static string readMSR(uint msr, int highBit, int lowBit) {
+            return sharedReadMSR(msr, highBit, lowBit);
+        }
+        private static string sharedReadMSR(uint msr, int highBit, int lowBit) {
+            string error = string.Empty;
+
+            //uint eax, edx;
+            if (!Ring0.Rdmsr(msr, out _msrEAX, out _msrEDX)) {
+                error = "Error reading MSR 0x" + msr.ToString("X8") + " (" + msr + ")";
+
+                try { error += "\n" + getLastError(); } catch { }
+                //ulong value = ((ulong)edx << 32 | eax);
+
+                ////check if we need to do some parsing of bits to get what we want
+                //if (highBit == 64 && lowBit == 0)
+                //    return value;
+
+                ////construct the ulong with the bits we're interested in
+                //ulong bits = 0;
+                //for (int i = lowBit; i < highBit; i++)
+                //    bits += (ulong)Math.Pow(2, i);
+
+                //ulong interestedValue = (value & bits) >> lowBit;
+
+                //return interestedValue;
+            }
+            //return 0;
+
+            return error;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="msr"></param>
+        /// <param name="value"></param>
+        /// <param name="core">Set thread affinity.</param>
+        /// <returns>error if any</returns>
+        [RGiesecke.DllExport.DllExport]
+        public static string writeMSRTx(uint msr, uint eax, uint edx, int core) {
+            SetCoreAffinity(core);
+            return sharedWriteMSR(msr, eax, edx);
+        }
+        /// <summary>
+        /// </summary>
+        /// <param name="msr"></param>
+        /// <param name="value"></param>
+        /// <returns>error if any</returns>
+        [RGiesecke.DllExport.DllExport]
+        public static string writeMSR(uint msr, uint eax, uint edx) {
+            return sharedWriteMSR(msr, eax, edx);
+        }
+
+        private static string sharedWriteMSR(uint msr, uint eax, uint edx) {
+            string error = string.Empty;
+
+            //uint eax, edx;
+
+            //edx = (uint)(value >> 32);
+            //eax = (uint)(value - ((ulong)edx << 32));
+
+            if (!Ring0.Wrmsr(msr, eax, edx)) {
+                error = "Error writing to MSR 0x" + msr.ToString("X8") + " (" + msr + ")";
+
+                try { error += "\n" + getLastError(); } catch { }
+
+                error += "\nIf you get all counters there should not be a problem.";
+            }
+            return error;
+        }
+
+        private static string getLastError() {
+            ulong errorCode = Ring0.GetLastError();
+            return "Win32Exception 0x" + errorCode.ToString("X8") + " (" + errorCode + "): " + (new Win32Exception((int)errorCode)).Message;//error codes http://msdn.microsoft.com/en-us/library/cc231199.aspx
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="core">Zero-based</param>
+        private static void SetCoreAffinity(int core) {
+            var process = Process.GetCurrentProcess();
+            var affinity = new IntPtr((long)Math.Pow(2, core));
+            if (process.ProcessorAffinity != affinity)
+                process.ProcessorAffinity = affinity;
+        }
+
+        [RGiesecke.DllExport.DllExport]
+        public static uint getPciAddress(byte bus, byte device, byte function) {
+            return Ring0.GetPciAddress(bus, device, function);
+        }
+
+        [RGiesecke.DllExport.DllExport]
+        public static uint readPciConfig(uint pciAddress, uint regAddress) {
+            uint value;
+            Ring0.ReadPciConfig(pciAddress, regAddress, out value);
+            return value;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pciAddress"></param>
+        /// <param name="regAddress"></param>
+        /// <param name="value"></param>
+        /// <returns>error if any</returns>
+        [RGiesecke.DllExport.DllExport]
+        public static string writePciConfig(uint pciAddress, uint regAddress, uint value) {
+            string error = string.Empty;
+            if (!Ring0.WritePciConfig(pciAddress, regAddress, value)) {
+                error = "Error while writing to pci address 0x" + pciAddress.ToString("X8") + " (" + pciAddress + ")";
+
+                try {
+                    ulong errorCode = Ring0.GetLastError();
+                    error += "\nWin32Exception 0x" + errorCode.ToString("X8") + " (" + errorCode + "): " + (new Win32Exception((int)errorCode)).Message;//error codes http://msdn.microsoft.com/en-us/library/cc231199.aspx
+                } catch { }
+
+                error += "\nIf you get all counters there should not be a problem.";
+            }
+            return error;
+        }
 
         /*
                  protected bool GetACPICStatesAndWindowsFrequencies(out short[] acpiStates, out short[] windowsFrequencies) {
@@ -269,5 +285,12 @@ namespace HMTProxy {
 
          */
 
+        /// <summary>
+        /// to know how much cores a group contains
+        /// </summary>
+        /// <param name="groupNumber">the group number if any, or ALL_PROCESSOR_GROUPS (0xffff) for every group</param>
+        /// <returns></returns>
+        [DllImport("kernel32.dll")]
+        private static extern uint GetActiveProcessorCount(ushort groupNumber); //Must be at the end of the file, otherwise RGiesecke.DllExport.DllExport marked functions will nog get linked. 
     }
 }

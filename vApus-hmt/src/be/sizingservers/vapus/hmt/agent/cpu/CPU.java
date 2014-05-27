@@ -5,87 +5,173 @@
  */
 package be.sizingservers.vapus.hmt.agent.cpu;
 
-import java.nio.ByteBuffer;
+import be.sizingservers.vapus.agent.Agent;
+import be.sizingservers.vapus.agent.util.Directory;
+import be.sizingservers.vapus.agent.util.Entities;
+import java.math.BigInteger;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
 
 /**
  *
  * @author Didjeeh
  */
-public class CPU implements CPUImplementation {
+public abstract class CPU {
 
-    private String vendor;
+    protected String vendor;
+    protected final long family, model;
+    protected int logicalCores, logicalCoresPerPackage, physicalCores, packages;
 
-    private CPUImplementation cpuImplementation;
+    protected Entities wih, wiw, wiwWithCounters;
 
-    public CPU() {
-        loadCPUID();
-    }
+    public CPU(long family, long model) {
+        this.family = family;
+        this.model = model;
 
-    private void loadCPUID() {
-
-        //Function 0 is used to get the Vendor String from the CPU. It also tells us the maximum function supported by cpuid. Every cpuid-supporting CPU will allow at least this function. I'll describe as many functions as I find information about, but please keep in mind that not all CPUs will handle all function values.
-        //It is stored in ASCII format as found on wikipedia http://en.wikipedia.org/wiki/CPUID
-        //When called, eax gets the maximum function call value.
-        //ebx gets the first 4 bytes of the Vendor String.
-        //edx gets the second 4 bytes of the Vendor String.
-        //ecx gets the last 4 bytes of the Vendor String.
-        CPUIDProxy.INSTANCE.load(0x0);
-
-        this.vendor = convert(CPUIDProxy.INSTANCE.EBX()) + convert(CPUIDProxy.INSTANCE.EDX()) + convert(CPUIDProxy.INSTANCE.ECX());
-
-        //Function 0x1 returns the Processor Family, Model, and Stepping information in eax. edx gets the Standard Feature Flags.
-        //bits (eax)	field
-        //0-3	Stepping number
-        //4-7	Model number
-        //8-11	Family number
-        //12-13	Processor Type
-        //16-19	Extended Model Number
-        //20-27	Extended Family Number
-        CPUIDProxy.INSTANCE.load(0x00000001);
-
-        //Intel has suggested applications to display the family of a CPU as the sum of the "Family" and the "Extended Family" fields shown above, and the model as the sum of the "Model" and the 4-bit left-shifted "Extended Model" fields.[4]
-        //AMD recommends the same only if "Family" is equal to 15 (i.e. all bits set to 1). If "Family" is lower than 15, only the "Family" and "Model" fields should be used while the "Extended Family" and "Extended Model" bits are reserved. If "Family" is set to 15, then "Extended Family" and the 4-bit left-shifted "Extended Model" should be added to the respective base values.[5]
-        //0xF = 15 = 1111 necessary to filter out the wanted bits
-        long family = (CPUIDProxy.INSTANCE.EAX() >> 8) & 0xF; //family
-        long model = (CPUIDProxy.INSTANCE.EAX() >> 4) & 0xF; //model
-
-        if (this.vendor.equals("GenuineIntel") || family >= 15) {
-            family += (CPUIDProxy.INSTANCE.EAX() >> 20) & 0xFF; //extended family
-            model += ((CPUIDProxy.INSTANCE.EAX() >> 16) & 0xF) << 4; //extended model
+        try {
+            HMTProxy.INSTANCE.init(Directory.getExecutingDirectory(CPUProvider.class));
+        } catch (URISyntaxException ex) {
+            Agent.getLogger().log(Level.SEVERE, "Could not init HMTProxy: {0}", ex);
         }
-
-        int logicalCores = Runtime.getRuntime().availableProcessors(); 
-
-        CPUIDProxy.INSTANCE.load(0x4);
-        long cores = ((CPUIDProxy.INSTANCE.EAX() >> 26) & 0x3F) + 1;//Niet betrouwbaar volgens het internet. Zeer spijtig.
-
-        if (this.vendor.equals("GenuineIntel")) {
-            this.cpuImplementation = new IntelCPU(family, model);
-        } else {
-            this.cpuImplementation = new AMDCPU(family, model);
-        }
+        this.logicalCores = HMTProxy.INSTANCE.getLogicalCores();
+        this.logicalCoresPerPackage = HMTProxy.INSTANCE.getLogicalCoresPerPackage();
+        this.physicalCores = HMTProxy.INSTANCE.getPhysicalCores();
+        this.packages = HMTProxy.INSTANCE.getPackages();
     }
 
-    private String convert(long l) {
-        return new StringBuilder(new String(ByteBuffer.allocate(Long.SIZE / 8).putLong(l).array()).trim()).reverse().toString();
+    abstract Entities getWDYH();
+
+    public void setWiw(Entities wiw) {
+        this.wiw = wiw;
+        this.wiwWithCounters = wiw.safeClone();
     }
 
-    public String getVendor() {
-        return this.vendor;
-    }
+    abstract Entities getWiwWithCounters();
 
-    @Override
     public long getFamily() {
-        return cpuImplementation.getFamily();
+        return this.family;
     }
 
-    @Override
     public long getModel() {
-        return cpuImplementation.getModel();
+        return this.model;
     }
 
-    @Override
-    public float getBusClockFrequencyInMhz() {
-        return cpuImplementation.getBusClockFrequencyInMhz();
+    abstract float getBusClockFrequencyInMhz();
+
+    /**
+     *
+     * @param msr
+     * @return
+     * @throws Exception
+     */
+    protected BigInteger readMSR(long msr) throws Exception {
+        return readMSR(msr, 64, 0);
+    }
+
+    /**
+     *
+     * @param msr
+     * @param highBit
+     * @param lowBit
+     * @return
+     * @throws Exception
+     */
+    protected BigInteger readMSR(long msr, int highBit, int lowBit) throws Exception {
+        String error = HMTProxy.INSTANCE.readMSR(msr, highBit, lowBit);
+        if (error.length() != 0) {
+            throw new Exception(error);
+        }
+
+        return fromEAX_EDX(highBit, lowBit);
+    }
+
+    /**
+     *
+     * @param msr
+     * @param core
+     * @return
+     * @throws Exception
+     */
+    protected BigInteger readMSR(long msr, int core) throws Exception {
+        return readMSR(msr, 64, 0, core);
+    }
+
+    /**
+     *
+     * @param msr
+     * @param highBit
+     * @param lowBit
+     * @param core
+     * @return
+     * @throws Exception If the MSR could not be read.
+     */
+    protected BigInteger readMSR(long msr, int highBit, int lowBit, int core) throws Exception {
+        String error = HMTProxy.INSTANCE.readMSRTx(msr, highBit, lowBit, core);
+        if (error.length() != 0) {
+            throw new Exception(error);
+        }
+
+        return fromEAX_EDX(highBit, lowBit);
+    }
+
+    private BigInteger fromEAX_EDX(int highBit, int lowBit) {
+        BigInteger eax = BigInteger.valueOf(HMTProxy.INSTANCE.getMSREAX());
+        BigInteger edx = BigInteger.valueOf(HMTProxy.INSTANCE.getMSREDX());
+
+        BigInteger value = edx.shiftLeft(32).or(eax);
+
+        //check if we need to do some parsing of bits to get what we want
+        if (highBit == 64 && lowBit == 0) {
+            return value;
+        }
+
+        //construct the ulong with the bits we're interested in
+        BigInteger bits = BigInteger.ZERO;
+        for (int i = lowBit; i < highBit; i++) {
+            bits.add(BigInteger.valueOf(2).pow(i));
+        }
+
+        return (value.and(bits)).shiftRight(lowBit);
+    }
+
+    /**
+     * 
+     * @param msr
+     * @param value
+     * @throws Exception 
+     */
+    protected void writeMSR(long msr, BigInteger value) throws Exception {
+        long edx = getEDX(value);
+        long eax = getEAX(value, edx);
+
+        String error = HMTProxy.INSTANCE.writeMSR(msr, eax, edx);
+        if (error.length() != 0) {
+            throw new Exception(error);
+        }
+    }
+
+    /**
+     * 
+     * @param msr
+     * @param value
+     * @param core
+     * @throws Exception 
+     */
+    protected void writeMSR(long msr, BigInteger value, int core) throws Exception {
+        long edx = getEDX(value);
+        long eax = getEAX(value, edx);
+
+        String error = HMTProxy.INSTANCE.writeMSRTx(msr, eax, edx, core);
+        if (error.length() != 0) {
+            throw new Exception(error);
+        }
+    }
+
+    private long getEDX(BigInteger value) {
+        return value.shiftRight(32).longValue();
+    }
+
+    private long getEAX(BigInteger value, long edx) {
+        return value.subtract(BigInteger.valueOf(edx).shiftLeft(32)).longValue();
     }
 }

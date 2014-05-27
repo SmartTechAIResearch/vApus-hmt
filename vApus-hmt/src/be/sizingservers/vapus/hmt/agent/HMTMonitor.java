@@ -11,8 +11,7 @@ import be.sizingservers.vapus.agent.Agent;
 import be.sizingservers.vapus.agent.Monitor;
 import be.sizingservers.vapus.agent.Server;
 import be.sizingservers.vapus.agent.util.Directory;
-import be.sizingservers.vapus.hmt.agent.cpu.CPU;
-import be.sizingservers.vapus.hmt.agent.cpu.CPUIDProxy;
+import be.sizingservers.vapus.hmt.agent.cpu.CPUProvider;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.util.logging.Level;
@@ -48,7 +47,7 @@ public class HMTMonitor extends Monitor {
             Agent.getLogger().log(Level.SEVERE, "Failed setting the jna.library.path: {0}", ex);
         }
         try {
-           CPU cpu = new CPU();
+           CPUProvider cpu = new CPUProvider();
         } catch (Exception ex) {
             Agent.getLogger().log(Level.SEVERE, "Failed loading cpu id: {0}", ex);
         }

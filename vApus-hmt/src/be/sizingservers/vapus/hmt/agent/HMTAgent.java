@@ -14,7 +14,6 @@ import be.sizingservers.vapus.agent.Agent;
  * @author Didjeeh
  */
 public class HMTAgent extends Agent {
-
     /**
      * @param args the command line arguments
      */

@@ -12,7 +12,7 @@ package be.sizingservers.vapus.hmt.agent.cpu;
 public class Registers {
 
     //Intel & AMD
-    public static final int MSR_TSC = 0x10; //Timestamp Counter
+    public static final long MSR_TSC = 0x10; //Timestamp Counter
 
     //Intel
     public static final int MSR_PLATFORM_INFO = 0xCE;

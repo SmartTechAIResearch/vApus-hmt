@@ -15,12 +15,17 @@ import be.sizingservers.vapus.agent.util.Entity;
 public class AMDCPU implements CPUImplementation {
 
     private final long family, model;
+    private final int logicalCores, logicalCoresPerPackage, physicalCores, packages;
     private boolean magnyCours, bulldozer, piledriver; //Piledriver BKDG is available, but they have an internal document with info we need for getting C-states. They do not want to give it to us.
     private Entities wih;
 
-    public AMDCPU(long family, long model) {
+    public AMDCPU(long family, long model, int logicalCores, int logicalCoresPerPackage, int physicalCores, int packages) {
         this.family = family;
         this.model = model;
+        this.logicalCores = logicalCores;
+        this.logicalCoresPerPackage = logicalCoresPerPackage;
+        this.physicalCores = physicalCores;
+        this.packages = packages;
         init();
     }
 
