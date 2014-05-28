@@ -18,3 +18,14 @@ C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProx
 C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.csproj.GenerateResource.Cache
 C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.exe
 C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.pdb
+C:\vApus-hmt\HMTProxy\Build\WinRing0x64.sys
+C:\vApus-hmt\HMTProxy\Build\InstallDriver.exe
+C:\vApus-hmt\HMTProxy\Build\WinRing0x64.dll
+C:\vApus-hmt\HMTProxy\Build\HMTProxyTester.exe.config
+C:\vApus-hmt\HMTProxy\Build\HMTProxyTester.exe
+C:\vApus-hmt\HMTProxy\Build\HMTProxyTester.pdb
+C:\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.csprojResolveAssemblyReference.cache
+C:\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.Properties.Resources.resources
+C:\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.csproj.GenerateResource.Cache
+C:\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.exe
+C:\vApus-hmt\HMTProxy\HMTProxyTester\obj\x64\Debug\HMTProxyTester.pdb

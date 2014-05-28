@@ -16,7 +16,7 @@ namespace HMTProxyTester {
 
             HMTProxy.HMTProxy.init(Application.StartupPath);
 
-            string error = HMTProxy.HMTProxy.readMSR64Tx(16, 0);
+            string error = HMTProxy.HMTProxy.readMSR(0xCE, 16, 8);
 
             Console.Read();
         }

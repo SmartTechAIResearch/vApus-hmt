@@ -20,13 +20,16 @@ namespace HMTProxy {
         private static uint _msrEAX, _msrEDX;
 
         /// <summary>
-        /// Sets the resolve path and installs the winring0 driver
+        /// Sets the resolve path, sets the current process priority class to high and installs the winring0 driver
         /// </summary>
         /// <param name="resolvePath"></param>
         [RGiesecke.DllExport.DllExport]
         public static void init(string resolvePath) {
             if (_resolvePath == null) {
                 _resolvePath = resolvePath;
+
+                Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+
                 AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
                 Process.Start(Path.Combine(_resolvePath, "installdriver.exe"), "-installonly");
 

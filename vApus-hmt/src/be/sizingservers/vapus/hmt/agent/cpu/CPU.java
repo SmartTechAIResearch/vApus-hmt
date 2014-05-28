@@ -128,7 +128,7 @@ public abstract class CPU {
         //construct the ulong with the bits we're interested in
         BigInteger bits = BigInteger.ZERO;
         for (int i = lowBit; i < highBit; i++) {
-            bits.add(BigInteger.valueOf(2).pow(i));
+           bits = bits.add(BigInteger.valueOf(2).pow(i));
         }
 
         return (value.and(bits)).shiftRight(lowBit);

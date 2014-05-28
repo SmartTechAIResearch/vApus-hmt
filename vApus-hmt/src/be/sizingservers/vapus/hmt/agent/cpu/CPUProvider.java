@@ -17,7 +17,7 @@ public class CPUProvider {
     private long family, model;
     private final CPU cpu;
 
-    public CPUProvider() {
+    public CPUProvider() throws Exception {
         loadCPUID();
 
         //if (this.vendor.equals("GenuineIntel")) {

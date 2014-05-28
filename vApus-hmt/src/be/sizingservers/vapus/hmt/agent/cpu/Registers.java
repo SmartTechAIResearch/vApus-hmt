@@ -38,9 +38,9 @@ public class Registers {
     public static final int MSR_IA32_PMC0 = 0xC1; //Performance monitor counter.
     public static final int MSR_RAPL_POWER_UNIT = 0x606;
     public static final int MSR_PKG_ENERGY_STATUS = 0x611;
-    public static final int MSR_PP0_ENERY_STATUS = 0x639;
-    public static final int MSR_PP1_ENERY_STATUS = 0x641;
-    public static final int MSR_DRAM_ENERY_STATUS = 0x619;
+    public static final int MSR_PP0_ENERGY_STATUS = 0x639;
+    public static final int MSR_PP1_ENERGY_STATUS = 0x641;
+    public static final int MSR_DRAM_ENERGY_STATUS = 0x619;
 
     //AMD
     public static final long COFVID_STATUS = 0xC0010071;
