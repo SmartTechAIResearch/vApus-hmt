@@ -5,10 +5,7 @@
  */
 package be.sizingservers.vapus.hmt.agent.cpu;
 
-import be.sizingservers.vapus.agent.util.CounterInfo;
-import be.sizingservers.vapus.agent.util.Entities;
-import be.sizingservers.vapus.agent.util.Entity;
-import be.sizingservers.vapus.agent.util.HostName;
+import be.sizingservers.vapus.agent.util.*;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import org.springframework.util.StopWatch;
@@ -53,14 +50,14 @@ public class IntelCPU extends CPU {
 
         determineArchitecture();
 
-        this.hyperThreadingEnabled = this.logicalCores > this.physicalCores; //Used in initMSRs amongst others.
+        initMSRs();
+
+        this.hyperThreadingEnabled = this.logicalCores > this.physicalCores;
 
         this.packageRepresentativeCores = new ArrayList<Integer>();
         for (int p = 0; p != super.packages; p++) {
             this.packageRepresentativeCores.add(p * (super.physicalCores / super.packages));
         }
-
-        initMSRs();
 
         this.baseFrequency = getBaseFrequency();
 
@@ -89,7 +86,7 @@ public class IntelCPU extends CPU {
         this.old_pp1 = getBigIntegerArray(this.packages);
         this.old_dram = getBigIntegerArray(this.packages);
 
-        foo();
+        getWIWWithCounters(getWDYH());
     }
 
     private void determineArchitecture() {
@@ -217,7 +214,7 @@ public class IntelCPU extends CPU {
             Entity entity = new Entity(HostName.get(), true);
 
             for (int core = 0; core != this.physicalCores; core++) {
-                CounterInfo counterInfo = new CounterInfo("physical core" + core);
+                CounterInfo counterInfo = new CounterInfo("physical core " + core);
                 counterInfo.getSubs().add(new CounterInfo("C0(%)"));
                 counterInfo.getSubs().add(new CounterInfo("C1(%)"));
                 counterInfo.getSubs().add(new CounterInfo("C3(%)"));
@@ -237,7 +234,7 @@ public class IntelCPU extends CPU {
             }
 
             for (int p = 0; p != this.packages; p++) {
-                CounterInfo counterInfo = new CounterInfo("package" + p);
+                CounterInfo counterInfo = new CounterInfo("package " + p);
                 counterInfo.getSubs().add(new CounterInfo("Multiplier"));
                 counterInfo.getSubs().add(new CounterInfo("Frequency(Mhz)"));
 
@@ -269,243 +266,245 @@ public class IntelCPU extends CPU {
     }
 
     @Override
-    public Entities getWiwWithCounters() {
+    public Entities getWIWWithCounters(Entities wiw) throws Exception {
+        Entities wiwWithCounters = wiw.safeClone();
+        Entity entity = wiwWithCounters.get(0);
 
-        return super.wiwWithCounters;
-    }
-
-    private void foo() throws Exception {
-        float currentFrequency = 0, currentMultiplier = 0, currentPackageEnergy = 0, currentPP0 = 0, currentPP1 = 0, currentDRAM = 0;
-
-        int packageIndex = -1;
-
-        for (int core = 0; core < this.physicalCores; core++) {
-            boolean representsNewPackageCore = packageRepresentativeCores.contains(core);
-            if (representsNewPackageCore) {
-                packageIndex++;
-            }
-
-            /* read all the values first, so we get minimum skew */
-            BigInteger timestampctr = super.readMSR(Registers.MSR_TSC, core);
-            BigInteger unhaltedCoreCycles = super.readMSR(Registers.MSR_IA32_FIXED_CTR1, core);
-            BigInteger unhaltedRefCycles = super.readMSR(Registers.MSR_IA32_FIXED_CTR2, core);
-            BigInteger core_C3 = super.readMSR(Registers.MSR_CORE_C3_RESIDENCY, core);
-            BigInteger core_C6 = super.readMSR(Registers.MSR_CORE_C6_RESIDENCY, core);
-            BigInteger core_C7 = super.readMSR(Registers.MSR_CORE_C7_RESIDENCY, core);
-
-            BigInteger pkg_C2 = BigInteger.ZERO, pkg_C3 = BigInteger.ZERO, pkg_C6 = BigInteger.ZERO, pkg_C7 = BigInteger.ZERO;
-            if (representsNewPackageCore) {
-                pkg_C3 = super.readMSR(Registers.MSR_PKG_C3_RESIDENCY, core);
-                pkg_C6 = super.readMSR(Registers.MSR_PKG_C6_RESIDENCY, core);
-
-                //will cause an error if we try this on a something else
-                if (this.sandyBridge || this.ivyBridge) {
-                    pkg_C2 = super.readMSR(Registers.MSR_PKG_C2_RESIDENCY, core);
-                    pkg_C7 = super.readMSR(Registers.MSR_PKG_C7_RESIDENCY, core);
-                }
-            }
-
-            //differences
-            float diffTimestamp = (float) getDifferenceBetweenValues(timestampctr, this.old_timestampctr[core]).longValue();
-            BigInteger diffUnhaltedCoreCycles = getDifferenceBetweenValues(unhaltedCoreCycles, this.old_unhaltedCoreCycles[core]);
-            BigInteger diffRefCycles = getDifferenceBetweenValues(unhaltedRefCycles, this.old_unhaltedRefCycles[core]);
-            BigInteger c3_diff = getDifferenceBetweenValues(core_C3, this.old_core_C3[core]);
-            BigInteger c6_diff = getDifferenceBetweenValues(core_C6, this.old_core_C6[core]);
-            BigInteger c7_diff = getDifferenceBetweenValues(core_C7, this.old_core_C7[core]);
-
-            //8. Compute the actual frequency value for each logical processor as follows:
-            // currentFreq = Base Operating Frequency * (Unhalted Core Cycles / Unhalted Ref Cycles)
-            //int sock;
-            //for (sock = 0; sock < _sockets; sock++)
-            //    if (sock * ((physical_cpus / _sockets)) == cpu) //new socket
-            BigInteger pkg_c2_diff = BigInteger.ZERO, pkg_c3_diff = BigInteger.ZERO, pkg_c6_diff = BigInteger.ZERO, pkg_c7_diff = BigInteger.ZERO;
-
-            if (representsNewPackageCore) {
-                //Multiplier
-                if (diffRefCycles.equals(BigInteger.ZERO)) {
-                    currentFrequency = this.baseFrequency;
-                } else {
-                    currentFrequency = this.baseFrequency * ((float) diffUnhaltedCoreCycles.longValue()) / diffRefCycles.longValue(); //this will mostly be always 1 or 1.000000xxx so it's not broken :)
-                }
-                currentMultiplier = currentFrequency / getBusClockFrequencyInMhz();
-
-                //Package consumed energy
-                currentPackageEnergy = getCurrentPackageEnergy(packageIndex, core);
-                currentPP0 = getCurrentPP0Energy(packageIndex, core);
-
-                if (this.pp1Available) {
-                    currentPP1 = getCurrentPP1Energy(packageIndex, core);
-                }
-                currentDRAM = getCurrentDRAMEnergy(packageIndex, core);
-
-                pkg_c3_diff = getDifferenceBetweenValues(pkg_C3, this.old_pkg_C3[packageIndex]);
-                pkg_c6_diff = getDifferenceBetweenValues(pkg_C6, this.old_pkg_C6[packageIndex]);
-
-                //would not crash, just cleaner
-                if (this.sandyBridge || this.ivyBridge) {
-                    pkg_c2_diff = getDifferenceBetweenValues(pkg_C2, this.old_pkg_C2[packageIndex]);
-                    pkg_c7_diff = getDifferenceBetweenValues(pkg_C7, this.old_pkg_C7[packageIndex]);
-                }
-            }
-
-            float c0amount = -1f, c1amount = -1f, c3amount = -1f, c6amount = -1f, c7amount = -1f;
-            float pkgc2amount = -1f, pkgc3amount = -1f, pkgc6amount = -1f, pkgc7amount = -1f;
-
-            if (diffTimestamp != 0f) {
-                //C0 time
-                //read the Fixed-Function Performance Counter 2 IA32_FIXED_CTR2 (30BH) and the TCS (10H - 16)
-                //these things have already been computed above us.
-                //%C0time = unhalted ref cycles/tsc
-                c0amount = ((float) diffRefCycles.longValue() / diffTimestamp) * 100f;
-
-                //%C3time = core_C3 / timestamp
-                c3amount = ((float) c3_diff.longValue() / diffTimestamp) * 100f;
-                c6amount = ((float) c6_diff.longValue() / diffTimestamp) * 100f;
-                c7amount = ((float) c7_diff.longValue() / diffTimestamp) * 100f;
-
-                //C1 time
-                //the C states > C0 are states where the core is halted.. so this amount of cycles
-                //can be calculated with (1 - (unhalted ref cycles / tsc cycles)) <-- http://software.intel.com/en-us/articles/measuring-the-halted-state/
-                //Please note that % C3 and % C6 (and greater...) is also included in this amount
-                //So I've chosen to extract the C1 time of the calculation; (total time (= 1) - c0 - c3 - c6 - ...) = c1 time 
-                c1amount = 1 - c0amount - c3amount - c6amount - (this.sandyBridge || this.ivyBridge ? c7amount : 0f); //or some extra calculations but same results --> 1 - ((double) diffRefCycles / diffTimestamp) - c3amount - c6amount;       
-
-                pkgc2amount = ((float) pkg_c2_diff.longValue() / diffTimestamp) * 100f;
-                pkgc3amount = ((float) pkg_c3_diff.longValue() / diffTimestamp) * 100f;
-                pkgc6amount = ((float) pkg_c6_diff.longValue() / diffTimestamp) * 100f;
-                pkgc7amount = ((float) pkg_c7_diff.longValue() / diffTimestamp) * 100f;
-            }
-            //saving values for next loop
-            this.old_timestampctr[core] = timestampctr;
-            this.old_unhaltedCoreCycles[core] = unhaltedCoreCycles;
-            this.old_unhaltedRefCycles[core] = unhaltedRefCycles;
-            this.old_core_C3[core] = core_C3;
-            this.old_core_C6[core] = core_C6;
-            this.old_core_C7[core] = core_C7;
-
-            if (representsNewPackageCore) {
-                this.old_pkg_C2[packageIndex] = pkg_C2;
-                this.old_pkg_C3[packageIndex] = pkg_C3;
-                this.old_pkg_C6[packageIndex] = pkg_C6;
-                this.old_pkg_C7[packageIndex] = pkg_C7;
-            }
-
-            if (c0amount > 100) {
-                c0amount = -1f;
-            }
-            if (c1amount > 100) {
-                c1amount = -1f;
-            }
-            if (c3amount > 100) {
-                c3amount = -1f;
-            }
-            if (c6amount > 100) {
-                c6amount = -1f;
+        for (int i = 0; i != entity.getSubs().size(); i++) {
+            CounterInfo info = entity.getSubs().get(i);
+            String name = info.getName();
+            if (name.startsWith("physical core ")) {
+                int core = new Integer(name.substring("physical core ".length()));
+                calculateCoreCStates(core, info);
+                calculateOtherCoreStuff(core, info);
+            } else if (name.startsWith("package ")) {
+                int packageIndex = new Integer(name.substring("package ".length()));
+                calculatePackageCStates(packageIndex, info);
+                calculateOtherPackageStuff(packageIndex, info);
             }
         }
+
+        //For reading the other stuff.
         if (this.elapsedTimeStopwatch.isRunning()) {
             this.elapsedTimeStopwatch.stop();
         }
         this.elapsedTimeStopwatch.start();
+
+        return wiwWithCounters;
     }
 
-    protected BigInteger getDifferenceBetweenValues(BigInteger newValue, BigInteger oldValue) {
-        if (oldValue.compareTo(newValue) > 0) { //handle overflow, taking unsigned long long max as upper bound.
-            return BigInteger.valueOf(2).pow(64).subtract(oldValue).add(newValue);
+    private void calculateCoreCStates(int core, CounterInfo info) throws Exception {
+        //If the timestampctr cannot be read, c states cannot be calculated.
+        BigInteger timestampctr = super.readMSR(Registers.MSR_TSC, core);
+        if (!timestampctr.equals(BigInteger.ZERO)) {
+            long diffTimestamp = getDifferenceBetweenValues(timestampctr, this.old_timestampctr[core]).longValue();
+
+            for (int i = 0; i != info.getSubs().size(); i++) {
+                CounterInfo sub = info.getSubs().get(i);
+                String name = sub.getName();
+
+                float c0Time = -1f, c1Time = -1f, c3Time = -1f, c6Time = -1f, c7Time = -1f;
+                if (name.equalsIgnoreCase("C0(%)")) {
+                    c0Time = calculateC0Time(core, diffTimestamp);
+                    sub.setCounter(c0Time);
+                } else if (name.equalsIgnoreCase("C1(%)")) {
+                    //the C states > C0 are states where the core is halted.. so this amount of cycles
+                    //can be calculated with (1 - (unhalted ref cycles / tsc cycles)) <-- http://software.intel.com/en-us/articles/measuring-the-halted-state/
+                    //Please note that % C3 and % C6 (and greater...) is also included in this amount
+                    //So I've chosen to extract the C1 time of the calculation; (total time (= 1) - c0 - c3 - c6 - ...) = c1 time 
+                    if (c0Time == -1f) {
+                        c0Time = calculateC0Time(core, diffTimestamp);
+                    }
+                    c3Time = calculateC3Time(core, diffTimestamp);
+                    c6Time = calculateC6Time(core, diffTimestamp);
+                    if (this.sandyBridge || this.ivyBridge) {
+                        c7Time = calculateC7Time(core, diffTimestamp);
+                        c1Time = 1f - c0Time - c3Time - c6Time - c7Time; //or some extra calculations but same results --> 1 - ((double) diffRefCycles / diffTimestamp) - c3amount - c6amount;       
+                    } else {
+                        c1Time = 1f - c0Time - c3Time - c6Time; //or some extra calculations but same results --> 1 - ((double) diffRefCycles / diffTimestamp) - c3amount - c6amount;       
+                    }
+
+                    sub.setCounter(c1Time);
+                } else if (name.equalsIgnoreCase("C3(%)")) {
+                    if (c3Time == -1f) {
+                        c3Time = calculateC3Time(core, diffTimestamp);
+                    }
+                    sub.setCounter(c3Time);
+                } else if (name.equalsIgnoreCase("C6(%)")) {
+                    if (c6Time == -1f) {
+                        c6Time = calculateC6Time(core, diffTimestamp);
+                    }
+                    sub.setCounter(c6Time);
+                } else if (name.equalsIgnoreCase("C7(%)")) {
+                    if (c7Time == -1f) {
+                        c7Time = calculateC7Time(core, diffTimestamp);
+                    }
+                    sub.setCounter(c7Time);
+                }
+            }
         }
-        return newValue.subtract(oldValue);
+
+        this.old_timestampctr[core] = timestampctr;
     }
 
-    /**
-     * Returns the energy consumption in W from the whole package (= includes
-     * PP0 and PP1 but also other things!)
-     *
-     * @param packageIndex
-     * @param core
-     * @return
-     * @throws Exception
-     */
-    private float getCurrentPackageEnergy(int packageIndex, int core) throws Exception {
-        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
-        BigInteger value = super.readMSR(Registers.MSR_PKG_ENERGY_STATUS, 32, 0, core);
+    private float calculateC0Time(int core, long diffTimestamp) throws Exception {
+        BigInteger unhaltedRefCycles = super.readMSR(Registers.MSR_IA32_FIXED_CTR2, core);
+        float diff = (float) getDifferenceBetweenValues(unhaltedRefCycles, this.old_unhaltedRefCycles[core]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_unhaltedRefCycles[core] = unhaltedRefCycles;
 
-        float energy = 0f;
-        if (elapsedTimeStopwatch.isRunning()) {
-            energy = (float) (getDifferenceBetweenValues(value, this.old_energy[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
-        }
-
-        this.old_energy[packageIndex] = value;
-
-        return energy;
+        //C0 time
+        //read the Fixed-Function Performance Counter 2 IA32_FIXED_CTR2 (30BH) and the TCS (10H - 16)
+        //these things have already been computed above us.
+        //%C0time = unhalted ref cycles/tsc
+        return calculateCTime(diff, diffTimestamp);
     }
 
-    /**
-     * Returns the energy consumption in W from power plane 0 (= the cores)
-     *
-     * @param packageIndex
-     * @param core
-     * @return
-     * @throws Exception
-     */
-    private float getCurrentPP0Energy(int packageIndex, int core) throws Exception {
-        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
-        BigInteger value = super.readMSR(Registers.MSR_PP0_ENERGY_STATUS, 32, 0, core);
+    private float calculateC3Time(int core, long diffTimestamp) throws Exception {
+        BigInteger core_C3 = super.readMSR(Registers.MSR_CORE_C3_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(core_C3, this.old_core_C3[core]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_core_C3[core] = core_C3;
 
-        float energy = 0f;
-        if (elapsedTimeStopwatch.isRunning()) {
-            energy = (float) (getDifferenceBetweenValues(value, this.old_pp0[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
-        }
-
-        this.old_pp0[packageIndex] = value;
-
-        return energy;
+        return calculateCTime(diff, diffTimestamp);
     }
 
-    /**
-     * Returns the energy consumption in W from power plane 1 (= the graphics
-     * core) It is possible that this is not available (servers).
-     *
-     * @param packageIndex
-     * @param core
-     * @return
-     * @throws Exception
-     */
-    private float getCurrentPP1Energy(int packageIndex, int core) throws Exception {
-        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
-        BigInteger value = super.readMSR(Registers.MSR_PP1_ENERGY_STATUS, 32, 0, core);
+    private float calculateC6Time(int core, long diffTimestamp) throws Exception {
+        BigInteger core_C6 = super.readMSR(Registers.MSR_CORE_C6_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(core_C6, this.old_core_C6[core]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_core_C6[core] = core_C6;
 
-        float energy = 0f;
-
-        if (elapsedTimeStopwatch.isRunning()) {
-            energy = (float) (getDifferenceBetweenValues(value, this.old_pp1[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
-        }
-
-        this.old_pp1[packageIndex] = value;
-
-        return energy;
+        return calculateCTime(diff, diffTimestamp);
     }
 
-    /**
-     * Returns the energy consumption in W from the DRAM part (what this
-     * includes is unclear). DRAM readout is only supported on server platforms.
-     *
-     * @param packageIndex
-     * @param core
-     * @return
-     * @throws Exception
-     */
-    private float getCurrentDRAMEnergy(int packageIndex, int core) throws Exception {
-        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
-        BigInteger value = super.readMSR(Registers.MSR_DRAM_ENERGY_STATUS, 32, 0, core);
+    private float calculateC7Time(int core, long diffTimestamp) throws Exception {
+        BigInteger core_C7 = super.readMSR(Registers.MSR_CORE_C7_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(core_C7, this.old_core_C7[core]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_core_C7[core] = core_C7;
 
-        float energy = 0f;
-        if (elapsedTimeStopwatch.isRunning()) {
-            energy = (float) (getDifferenceBetweenValues(value, this.old_dram[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
+        return calculateCTime(diff, diffTimestamp);
+    }
+
+    private void calculateOtherCoreStuff(int core, CounterInfo info) throws Exception {
+        for (int i = 0; i != info.getSubs().size(); i++) {
+            CounterInfo sub = info.getSubs().get(i);
+            String name = sub.getName();
+
+            float value = -1f;
+            if (name.equalsIgnoreCase("Temp(C)")) {
+                value = getCoreTemperature(core);
+            } else if (name.equalsIgnoreCase("ACPI C state")) {
+            } else if (name.equalsIgnoreCase("Windows Frequency(Mhz)")) {
+            }
+
+            sub.setCounter(value);
+        }
+    }
+
+    private void calculatePackageCStates(int packageIndex, CounterInfo info) throws Exception {
+        int core = this.packageRepresentativeCores.get(packageIndex);
+
+        //If the timestampctr cannot be read, c states cannot be calculated.
+        BigInteger timestampctr = super.readMSR(Registers.MSR_TSC, core);
+        if (!timestampctr.equals(BigInteger.ZERO)) {
+            long diffTimestamp = getDifferenceBetweenValues(timestampctr, this.old_timestampctr[core]).longValue();
+            for (int i = 0; i != 0; i++) {
+                CounterInfo sub = info.getSubs().get(i);
+                String name = sub.getName();
+
+                float value = -1f;
+                if (name.equalsIgnoreCase("PC2(%)")) {
+                    value = calculatePC2Time(core, packageIndex, diffTimestamp);
+                } else if (name.equalsIgnoreCase("PC3(%)")) {
+                    value = calculatePC3Time(core, packageIndex, diffTimestamp);
+                } else if (name.equalsIgnoreCase("PC6(%)")) {
+                    value = calculatePC6Time(core, packageIndex, diffTimestamp);
+                } else if (name.equalsIgnoreCase("PC7(%)")) {
+                    value = calculatePC7Time(core, packageIndex, diffTimestamp);
+                }
+                sub.setCounter(value);
+            }
         }
 
-        this.old_dram[packageIndex] = value;
+        this.old_timestampctr[core] = timestampctr;
+    }
 
-        return energy;
+    private float calculatePC2Time(int core, int packageIndex, long diffTimestamp) throws Exception {
+        BigInteger pkg_C2 = super.readMSR(Registers.MSR_PKG_C2_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(pkg_C2, this.old_pkg_C2[packageIndex]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_pkg_C2[packageIndex] = pkg_C2;
+
+        return calculateCTime(diff, diffTimestamp);
+    }
+
+    private float calculatePC3Time(int core, int packageIndex, long diffTimestamp) throws Exception {
+        BigInteger pkg_C3 = super.readMSR(Registers.MSR_PKG_C3_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(pkg_C3, this.old_pkg_C3[packageIndex]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_pkg_C3[packageIndex] = pkg_C3;
+
+        return calculateCTime(diff, diffTimestamp);
+    }
+
+    private float calculatePC6Time(int core, int packageIndex, long diffTimestamp) throws Exception {
+        BigInteger pkg_C6 = super.readMSR(Registers.MSR_PKG_C6_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(pkg_C6, this.old_pkg_C6[packageIndex]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_pkg_C6[packageIndex] = pkg_C6;
+
+        return calculateCTime(diff, diffTimestamp);
+    }
+
+    private float calculatePC7Time(int core, int packageIndex, long diffTimestamp) throws Exception {
+        BigInteger pkg_C7 = super.readMSR(Registers.MSR_PKG_C7_RESIDENCY, core);
+        float diff = (float) getDifferenceBetweenValues(pkg_C7, this.old_pkg_C7[packageIndex]).longValue();
+        //saving values for next loop, so the difference can be made.
+        this.old_pkg_C7[packageIndex] = pkg_C7;
+
+        return calculateCTime(diff, diffTimestamp);
+    }
+
+    private void calculateOtherPackageStuff(int packageIndex, CounterInfo info) throws Exception {
+        int core = this.packageRepresentativeCores.get(packageIndex);
+
+        for (int i = 0; i != info.getSubs().size(); i++) {
+            CounterInfo sub = info.getSubs().get(i);
+            String name = sub.getName();
+
+            float value = -1f, frequency = -1f;
+            if (name.equalsIgnoreCase("Multiplier")) {
+                frequency = getCurrentFrequency(core);
+                value = frequency / getBusClockFrequencyInMhz();
+
+            } else if (name.equalsIgnoreCase("Frequency(Mhz)")) {
+                if (frequency == -1f) {
+                    frequency = getCurrentFrequency(core);
+                }
+                value = frequency;
+
+            } else if (name.equalsIgnoreCase("Energy(W)")) {
+                value = getCurrentPackageEnergy(packageIndex, core);
+            } else if (name.equalsIgnoreCase("PP0(W)")) {
+                value = getCurrentPP0Energy(packageIndex, core);
+            } else if (name.equalsIgnoreCase("PP1(W)")) {
+                value = getCurrentPP1Energy(packageIndex, core);
+            } else if (name.equalsIgnoreCase("DRAM(W)")) {
+                value = getCurrentDRAMEnergy(packageIndex, core);
+            }
+            sub.setCounter(value);
+        }
+    }
+
+    private float calculateCTime(float diff, long diffTimestamp) {
+        float cTime = (diff / diffTimestamp) * 100f;
+        if (cTime > 100f || cTime < 0f) {
+            return -1f;
+        }
+
+        return cTime;
     }
 
     /**
@@ -537,4 +536,116 @@ public class IntelCPU extends CPU {
         //actual temperature is prochot - digital readout
         return (int) (this.maxProcessorTemp - value);
     }
+
+    private float getCurrentFrequency(int core) throws Exception {
+        BigInteger unhaltedRefCycles = super.readMSR(Registers.MSR_IA32_FIXED_CTR2, core);
+
+        long diffRefCycles = getDifferenceBetweenValues(unhaltedRefCycles, this.old_unhaltedRefCycles[core]).longValue();
+
+        float frequency = this.baseFrequency;
+        if (diffRefCycles != 0l) {
+            BigInteger unhaltedCoreCycles = super.readMSR(Registers.MSR_IA32_FIXED_CTR1, core);
+
+            float diffUnhaltedCoreCycles = (float) getDifferenceBetweenValues(unhaltedCoreCycles, this.old_unhaltedCoreCycles[core]).longValue();
+            frequency *= diffUnhaltedCoreCycles / diffRefCycles; //this will mostly be always 1 or 1.000000xxx so it's not broken :)
+
+            this.old_unhaltedCoreCycles[core] = unhaltedCoreCycles;
+        }
+        this.old_unhaltedRefCycles[core] = unhaltedRefCycles;
+
+        return frequency;
+    }
+
+    /**
+     * Returns the energy consumption in W from the whole package (= includes
+     * PP0 and PP1 but also other things!)
+     *
+     * @param packageIndex
+     * @param core
+     * @return
+     * @throws Exception
+     */
+    private float getCurrentPackageEnergy(int packageIndex, int core) throws Exception {
+        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
+        BigInteger value = super.readMSR(Registers.MSR_PKG_ENERGY_STATUS, 32, 0, core);
+
+        float energy = -1f;
+        if (elapsedTimeStopwatch.isRunning()) {
+            energy = (float) (getDifferenceBetweenValues(value, this.old_energy[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
+        }
+
+        this.old_energy[packageIndex] = value;
+
+        return energy;
+    }
+
+    /**
+     * Returns the energy consumption in W from power plane 0 (= the cores)
+     *
+     * @param packageIndex
+     * @param core
+     * @return
+     * @throws Exception
+     */
+    private float getCurrentPP0Energy(int packageIndex, int core) throws Exception {
+        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
+        BigInteger value = super.readMSR(Registers.MSR_PP0_ENERGY_STATUS, 32, 0, core);
+
+        float energy = -1f;
+        if (elapsedTimeStopwatch.isRunning()) {
+            energy = (float) (getDifferenceBetweenValues(value, this.old_pp0[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
+        }
+
+        this.old_pp0[packageIndex] = value;
+
+        return energy;
+    }
+
+    /**
+     * Returns the energy consumption in W from power plane 1 (= the graphics
+     * core) It is possible that this is not available (servers).
+     *
+     * @param packageIndex
+     * @param core
+     * @return
+     * @throws Exception
+     */
+    private float getCurrentPP1Energy(int packageIndex, int core) throws Exception {
+        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
+        BigInteger value = super.readMSR(Registers.MSR_PP1_ENERGY_STATUS, 32, 0, core);
+
+        float energy = -1f;
+
+        if (elapsedTimeStopwatch.isRunning()) {
+            energy = (float) (getDifferenceBetweenValues(value, this.old_pp1[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
+        }
+
+        this.old_pp1[packageIndex] = value;
+
+        return energy;
+    }
+
+    /**
+     * Returns the energy consumption in W from the DRAM part (what this
+     * includes is unclear). DRAM readout is only supported on server platforms.
+     *
+     * @param packageIndex
+     * @param core
+     * @return
+     * @throws Exception
+     */
+    private float getCurrentDRAMEnergy(int packageIndex, int core) throws Exception {
+        //this msr counts the number of "burned" energy units. Using the Energy Status Units we can know the Joules and by dividing with #seconds_elapsed we know the Watt :-)
+        BigInteger value = super.readMSR(Registers.MSR_DRAM_ENERGY_STATUS, 32, 0, core);
+
+        float energy = -1f;
+        if (elapsedTimeStopwatch.isRunning()) {
+            energy = (float) (getDifferenceBetweenValues(value, this.old_dram[packageIndex]).longValue() * this.joulesPerEnergyUnit / this.elapsedTimeStopwatch.getTotalTimeSeconds());
+        }
+
+        this.old_dram[packageIndex] = value;
+
+        return energy;
+    }
+
 }

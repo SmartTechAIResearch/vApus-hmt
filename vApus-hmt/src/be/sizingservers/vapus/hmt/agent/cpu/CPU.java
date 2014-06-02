@@ -22,7 +22,7 @@ public abstract class CPU {
     protected final long family, model;
     protected int logicalCores, logicalCoresPerPackage, physicalCores, packages;
 
-    protected Entities wih, wiw, wiwWithCounters;
+    protected Entities wih;
 
     public CPU(long family, long model) {
         this.family = family;
@@ -41,12 +41,7 @@ public abstract class CPU {
 
     abstract Entities getWDYH();
 
-    public void setWiw(Entities wiw) {
-        this.wiw = wiw;
-        this.wiwWithCounters = wiw.safeClone();
-    }
-
-    abstract Entities getWiwWithCounters();
+    abstract Entities getWIWWithCounters(Entities wiw) throws Exception;
 
     public long getFamily() {
         return this.family;
@@ -128,17 +123,17 @@ public abstract class CPU {
         //construct the ulong with the bits we're interested in
         BigInteger bits = BigInteger.ZERO;
         for (int i = lowBit; i < highBit; i++) {
-           bits = bits.add(BigInteger.valueOf(2).pow(i));
+            bits = bits.add(BigInteger.valueOf(2).pow(i));
         }
 
         return (value.and(bits)).shiftRight(lowBit);
     }
 
     /**
-     * 
+     *
      * @param msr
      * @param value
-     * @throws Exception 
+     * @throws Exception
      */
     protected void writeMSR(long msr, BigInteger value) throws Exception {
         long edx = getEDX(value);
@@ -151,11 +146,11 @@ public abstract class CPU {
     }
 
     /**
-     * 
+     *
      * @param msr
      * @param value
      * @param core
-     * @throws Exception 
+     * @throws Exception
      */
     protected void writeMSR(long msr, BigInteger value, int core) throws Exception {
         long edx = getEDX(value);
@@ -173,5 +168,18 @@ public abstract class CPU {
 
     private long getEAX(BigInteger value, long edx) {
         return value.subtract(BigInteger.valueOf(edx).shiftLeft(32)).longValue();
+    }
+
+    /**
+     * handle overflow, taking unsigned long long max as upper bound.
+     * @param newValue
+     * @param oldValue
+     * @return 
+     */
+    protected BigInteger getDifferenceBetweenValues(BigInteger newValue, BigInteger oldValue) {
+        if (oldValue.compareTo(newValue) > 0) {
+            return BigInteger.valueOf(2).pow(64).subtract(oldValue).add(newValue);
+        }
+        return newValue.subtract(oldValue);
     }
 }
