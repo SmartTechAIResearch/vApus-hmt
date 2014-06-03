@@ -103,9 +103,9 @@ namespace HMTProxy {
         /// <param name="core">Set thread affinity.</param>
         /// <returns></returns>
         [RGiesecke.DllExport.DllExport]
-        public static string readMSRTx(uint msr, int highBit, int lowBit, int core) {
-            SetCoreAffinity(core);
-            return sharedReadMSR(msr, highBit, lowBit);
+        public static string readMSRTx(uint msr, int core) {
+            setCoreAffinity(core);
+            return sharedReadMSR(msr);
         }
 
         /// <summary>
@@ -115,10 +115,10 @@ namespace HMTProxy {
         /// <param name="lowBit"></param>
         /// <returns></returns>
         [RGiesecke.DllExport.DllExport]
-        public static string readMSR(uint msr, int highBit, int lowBit) {
-            return sharedReadMSR(msr, highBit, lowBit);
+        public static string readMSR(uint msr) {
+            return sharedReadMSR(msr);
         }
-        private static string sharedReadMSR(uint msr, int highBit, int lowBit) {
+        private static string sharedReadMSR(uint msr) {
             string error = string.Empty;
 
             //uint eax, edx;
@@ -155,7 +155,7 @@ namespace HMTProxy {
         /// <returns>error if any</returns>
         [RGiesecke.DllExport.DllExport]
         public static string writeMSRTx(uint msr, uint eax, uint edx, int core) {
-            SetCoreAffinity(core);
+            setCoreAffinity(core);
             return sharedWriteMSR(msr, eax, edx);
         }
         /// <summary>
@@ -195,7 +195,7 @@ namespace HMTProxy {
         /// 
         /// </summary>
         /// <param name="core">Zero-based</param>
-        private static void SetCoreAffinity(int core) {
+        public static void setCoreAffinity(int core) {
             var process = Process.GetCurrentProcess();
             var affinity = new IntPtr((long)Math.Pow(2, core));
             if (process.ProcessorAffinity != affinity)

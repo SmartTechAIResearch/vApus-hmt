@@ -1,14 +1,13 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2014 (c) Sizing Servers Lab
+ * University College of West-Flanders, Department GKG * 
+ * Author(s):
+ * 	Dieter Vandroemme
  */
-
 package be.sizingservers.vapus.hmt.agent.cpu;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
-import java.math.BigInteger;
 
 /**
  *
@@ -34,13 +33,11 @@ public interface HMTProxy extends Library {
     /**
      * 
      * @param msr
-     * @param highBit
-     * @param lowBit
      * @param core Set thread affinity.
      * @return 
      */
-    public String readMSRTx(long msr, int highBit, int lowBit, int core);
-    public String readMSR(long msr, int highBit, int lowBit);
+    public String readMSRTx(long msr, int core);
+    public String readMSR(long msr);
     
     /**
      * 

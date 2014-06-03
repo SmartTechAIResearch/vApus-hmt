@@ -11,6 +11,5 @@ C:\vApus-hmt\HMTProxy\Build\InstallDriver.exe
 C:\vApus-hmt\HMTProxy\Build\WinRing0x64.dll
 C:\vApus-hmt\HMTProxy\Build\HMTProxy.dll
 C:\vApus-hmt\HMTProxy\Build\HMTProxy.pdb
-C:\vApus-hmt\HMTProxy\HMTProxy\obj\x64\Debug\HMTProxy.csprojResolveAssemblyReference.cache
 C:\vApus-hmt\HMTProxy\HMTProxy\obj\x64\Debug\HMTProxy.dll
 C:\vApus-hmt\HMTProxy\HMTProxy\obj\x64\Debug\HMTProxy.pdb

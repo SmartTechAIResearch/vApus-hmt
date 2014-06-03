@@ -1,0 +1,11 @@
+Jun 3, 2014 6:27:07 AM be.sizingservers.vapus.agent.Server start
+SEVERE: Failed starting server: {0}
+java.net.BindException: Address already in use: JVM_Bind
+	at java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.net.PlainSocketImpl.bind(PlainSocketImpl.java:383)
+	at java.net.ServerSocket.bind(ServerSocket.java:328)
+	at java.net.ServerSocket.<init>(ServerSocket.java:194)
+	at java.net.ServerSocket.<init>(ServerSocket.java:106)
+	at be.sizingservers.vapus.agent.Server.start(Server.java:54)
+	at be.sizingservers.vapus.agent.Agent.main(Agent.java:87)
+	at be.sizingservers.vapus.hmt.agent.HMTAgent.main(HMTAgent.java:21)

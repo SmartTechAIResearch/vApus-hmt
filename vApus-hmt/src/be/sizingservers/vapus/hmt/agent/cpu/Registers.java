@@ -1,7 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2014 (c) Sizing Servers Lab
+ * University College of West-Flanders, Department GKG * 
+ * Author(s):
+ * 	Dieter Vandroemme
  */
 package be.sizingservers.vapus.hmt.agent.cpu;
 
@@ -20,18 +21,19 @@ public class Registers {
     public static final int MSR_APERF = 0xE8;
     public static final int MSR_CORE_C3_RESIDENCY = 0x3FC;
     public static final int MSR_CORE_C6_RESIDENCY = 0x3FD;
-    public static final int MSR_CORE_C7_RESIDENCY = 0x3FE; //SandyBridge
-    public static final int MSR_PKG_C2_RESIDENCY = 0x60D; //SandyBridge
+    public static final int MSR_CORE_C7_RESIDENCY = 0x3FE; //SandyBridge and up
+    public static final int MSR_PKG_C2_RESIDENCY = 0x60D; //SandyBridge and up
     public static final int MSR_PKG_C3_RESIDENCY = 0x3F8;
     public static final int MSR_PKG_C6_RESIDENCY = 0x3F9;
-    public static final int MSR_PKG_C7_RESIDENCY = 0x3FA; //SandyBridge
-    public static final int MSR_TEMPERATURE_TARGET = 0x1A2;
+    public static final int MSR_PKG_C7_RESIDENCY = 0x3FA; //SandyBridge and up
+    public static final int MSR_IA32_TEMPERATURE_TARGET = 0x1A2;
     public static final int MSR_TURBO_RATIO_LIMIT = 0x1AD;
     public static final int MSR_IA32_FIXED_CTR1 = 0x30A;
     public static final int MSR_IA32_FIXED_CTR2 = 0x30B;
     public static final int MSR_IA32_PERF_GLOBAL_CTRL = 0x38F;
     public static final int MSR_IA32_FIXED_CTR_CTL = 0x38D;
     public static final int MSR_IA32_THERM_STATUS = 0x19C;
+    public static final int MSR_IA32_PACKAGE_THERM_STATUS = 0x1B1;
     public static final int MSR_IA32_MISC_ENABLE = 0x1A0;
     public static final int MSR_Logical_Destination_Register = 0x80D;
     public static final int MSR_IA32_PERFEVTSEL0_ADDR = 0x186;  //holds the first programmable event, +1 for each available event

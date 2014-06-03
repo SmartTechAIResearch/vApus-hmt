@@ -1,7 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2014 (c) Sizing Servers Lab
+ * University College of West-Flanders, Department GKG * 
+ * Author(s):
+ * 	Dieter Vandroemme
  */
 package be.sizingservers.vapus.hmt.agent.cpu;
 
@@ -39,9 +40,9 @@ public abstract class CPU {
         this.packages = HMTProxy.INSTANCE.getPackages();
     }
 
-    abstract Entities getWDYH();
+    public abstract Entities getWDYH();
 
-    abstract Entities getWIWWithCounters(Entities wiw) throws Exception;
+    public abstract Entities getWIWWithCounters(Entities wiw) throws Exception;
 
     public long getFamily() {
         return this.family;
@@ -72,7 +73,7 @@ public abstract class CPU {
      * @throws Exception
      */
     protected BigInteger readMSR(long msr, int highBit, int lowBit) throws Exception {
-        String error = HMTProxy.INSTANCE.readMSR(msr, highBit, lowBit);
+        String error = HMTProxy.INSTANCE.readMSR(msr);
         if (error.length() != 0) {
             throw new Exception(error);
         }
@@ -94,14 +95,14 @@ public abstract class CPU {
     /**
      *
      * @param msr
-     * @param highBit
-     * @param lowBit
+     * @param highBit exclusive!
+     * @param lowBit inclusive!
      * @param core
      * @return
      * @throws Exception If the MSR could not be read.
      */
     protected BigInteger readMSR(long msr, int highBit, int lowBit, int core) throws Exception {
-        String error = HMTProxy.INSTANCE.readMSRTx(msr, highBit, lowBit, core);
+        String error = HMTProxy.INSTANCE.readMSRTx(msr, core);
         if (error.length() != 0) {
             throw new Exception(error);
         }
