@@ -52,6 +52,10 @@ public abstract class CPU {
         return this.model;
     }
 
+    public boolean getOSIsWindows() {
+        return System.getProperty("os.name").startsWith("Windows");
+    }
+
     abstract float getBusClockFrequencyInMhz();
 
     /**
@@ -173,9 +177,10 @@ public abstract class CPU {
 
     /**
      * handle overflow, taking unsigned long long max as upper bound.
+     *
      * @param newValue
      * @param oldValue
-     * @return 
+     * @return
      */
     protected BigInteger getDifferenceBetweenValues(BigInteger newValue, BigInteger oldValue) {
         if (oldValue.compareTo(newValue) > 0) {

@@ -14,9 +14,9 @@ import com.sun.jna.Native;
  * @author Didjeeh
  */
 public interface HMTProxy extends Library {
-    //HMTProxy INSTANCE = (HMTProxy) Native.loadLibrary(System.getProperty("os.name").startsWith("Windows") ? "/HMTProxy.dll" : "/HMTProxy.so", HMTProxy.class);
+    HMTProxy INSTANCE = (HMTProxy) Native.loadLibrary(System.getProperty("os.name").startsWith("Windows") ? "/HMTProxy.dll" : "/HMTProxy.so", HMTProxy.class);
 
-    HMTProxy INSTANCE = (HMTProxy) Native.loadLibrary("/HMTProxy.dll", HMTProxy.class);
+    //HMTProxy INSTANCE = (HMTProxy) Native.loadLibrary("/HMTProxy.dll", HMTProxy.class);
     
     public void init(String resolvePath);
     
@@ -67,4 +67,19 @@ public interface HMTProxy extends Library {
      * @return error if any
      */
     public String writePciConfig(long pciAddress, long regAddress, long value);
+    
+    /**
+     * 
+     * @param core The physical core.
+     * @param hyperThreading
+     * @return 
+     */
+    public int getACPICState(int core, boolean hyperThreading);
+    /**
+     * Calling this will not work on Linux obviously.
+     * @param core The physical core.
+     * @param hyperThreading
+     * @return 
+     */
+    public int getWindowsFrequency(int core, boolean hyperThreading);
 }

@@ -89,6 +89,10 @@ public class IntelCPU extends CPU {
         this.old_pp0 = getBigIntegerArray(this.packages);
         this.old_pp1 = getBigIntegerArray(this.packages);
         this.old_dram = getBigIntegerArray(this.packages);
+
+//        getWIWWithCounters(getWDYH());
+//        Thread.sleep(1000);
+//        getWIWWithCounters(getWDYH());
     }
 
     private void determineArchitecture() {
@@ -237,7 +241,9 @@ public class IntelCPU extends CPU {
 
                 counterInfo.getSubs().add(new CounterInfo("ACPI C state"));
 
-                counterInfo.getSubs().add(new CounterInfo("Windows Frequency(Mhz)"));
+                if (super.getOSIsWindows()) {
+                    counterInfo.getSubs().add(new CounterInfo("Windows Frequency(Mhz)"));
+                }
 
                 if (getCoreTemperatureAvailable(core)) {
                     counterInfo.getSubs().add(new CounterInfo("Temp(C)"));
@@ -452,16 +458,16 @@ public class IntelCPU extends CPU {
             CounterInfo sub = info.getSubs().get(i);
             String name = sub.getName();
 
-            float value = -2f;
+            int value = -2;
             if (name.equalsIgnoreCase("ACPI C state")) {
-                value = 0f;
+                value = HMTProxy.INSTANCE.getACPICState(core, this.hyperThreadingEnabled);
             } else if (name.equalsIgnoreCase("Windows Frequency(Mhz)")) {
-                value = 0f;
+                value = HMTProxy.INSTANCE.getWindowsFrequency(core, this.hyperThreadingEnabled);
             } else if (name.equalsIgnoreCase("Temp(C)")) {
                 value = getCoreTemperature(core);
             }
 
-            if (value != -2f) {
+            if (value != -2) {
                 sub.setCounter(value);
             }
         }
@@ -555,7 +561,8 @@ public class IntelCPU extends CPU {
             } else if (name.equalsIgnoreCase("DRAM(W)")) {
                 value = getCurrentDRAMEnergy(packageIndex, core);
             } else if (name.equalsIgnoreCase("Temp(C)")) {
-                value = getPackageTemperature(core);
+                //Temp as integer.
+                sub.setCounter(getPackageTemperature(core));
             }
 
             if (value != -2f) {
@@ -587,7 +594,7 @@ public class IntelCPU extends CPU {
      * @return
      * @throws java.lang.Exception
      */
-    private float getCoreTemperature(int core) throws Exception {
+    private int getCoreTemperature(int core) throws Exception {
         //	 Digital temperature reading in 1 degree
         //	Celsius relative to the TCC activation temperature.
         //	0: TCC Activation temperature,
@@ -601,14 +608,14 @@ public class IntelCPU extends CPU {
         long value = super.readMSR(Registers.MSR_IA32_THERM_STATUS, 23, 16, core).longValue(); //highbit is exclusive!
 
         //actual temperature is prochot - digital readout
-        float temp = (float) (this.maxProcessorTemp - value);
-        if (temp < 0f || temp > this.maxProcessorTemp) {
-            return -1f;
+        int temp = (int) (this.maxProcessorTemp - value);
+        if (temp < 0l || temp > this.maxProcessorTemp) {
+            return -1;
         }
         return temp;
     }
 
-    private float getPackageTemperature(int core) throws Exception {
+    private int getPackageTemperature(int core) throws Exception {
         //	 Digital temperature reading in 1 degree
         //	Celsius relative to the TCC activation temperature.
         //	0: TCC Activation temperature,
@@ -622,9 +629,9 @@ public class IntelCPU extends CPU {
         long value = super.readMSR(Registers.MSR_IA32_PACKAGE_THERM_STATUS, 23, 16, core).longValue(); //highbit is exclusive!
 
         //actual temperature is prochot - digital readout
-        float temp = (float) (this.maxProcessorTemp - value);
-        if (temp < 0f || temp > this.maxProcessorTemp) {
-            return -1f;
+        int temp = (int) (this.maxProcessorTemp - value);
+        if (temp < 0 || temp > this.maxProcessorTemp) {
+            return -1;
         }
         return temp;
     }

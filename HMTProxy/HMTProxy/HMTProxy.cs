@@ -19,6 +19,8 @@ namespace HMTProxy {
 
         private static uint _msrEAX, _msrEDX;
 
+        private static int[] _acpiStates, _windowsFrequencies;
+
         /// <summary>
         /// Sets the resolve path, sets the current process priority class to high and installs the winring0 driver
         /// </summary>
@@ -55,6 +57,9 @@ namespace HMTProxy {
 
         [RGiesecke.DllExport.DllExport]
         public static int getLogicalCores() {
+            return sharedGetLogicalCores();
+        }
+        private static int sharedGetLogicalCores() {
             if (_logicalCores == 0) _logicalCores = Convert.ToInt32(GetActiveProcessorCount(0xFFFF)); //to include all processor groups
             return _logicalCores;
         }
@@ -237,56 +242,77 @@ namespace HMTProxy {
             return error;
         }
 
-        /*
-                 protected bool GetACPICStatesAndWindowsFrequencies(out short[] acpiStates, out short[] windowsFrequencies) {
-            bool executedCorrectly = false;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="core"></param>
+        /// <param name="hyperThreading"></param>
+        /// <returns></returns>
+        [RGiesecke.DllExport.DllExport]
+        public static int getACPICState(int core, bool hyperThreading) {
+            if (_acpiStates == null)
+                CalculateACPICStatesAndWindowsFreqs();
+            return hyperThreading ? Math.Min(_acpiStates[core * 2], _acpiStates[(core * 2) + 1]) : _acpiStates[core];
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="core"></param>
+        /// <param name="hyperThreading"></param>
+        /// <returns></returns>
+        [RGiesecke.DllExport.DllExport]
+        public static int getWindowsFrequency(int core, bool hyperThreading) {
+            if (_windowsFrequencies == null)
+                CalculateACPICStatesAndWindowsFreqs();
+            return hyperThreading ? Math.Min(_windowsFrequencies[core * 2], _windowsFrequencies[(core * 2) + 1]) : _windowsFrequencies[core];
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>Error if any</returns>
+        private static string CalculateACPICStatesAndWindowsFreqs() { 
+            string error = string.Empty;
             //The lpInBuffer parameter must be NULL; otherwise the function returns ERROR_INVALID_PARAMETER.
             //The lpOutputBuffer buffer receives one PROCESSOR_POWER_INFORMATION structure for each processor that is installed on the system. Use the GetSystemInfo function to retrieve the number of processors.
 
-            acpiStates = new short[_logicalCpus];
-            windowsFrequencies = new short[_logicalCpus];
+            _acpiStates = new int[sharedGetLogicalCores()];
+            _windowsFrequencies = new int[_logicalCores];
 
             Type typeOfStruct = typeof(PROCESSOR_POWER_INFORMATION);
             int sizeOfStruct = Marshal.SizeOf(typeOfStruct);
 
-            IntPtr ptr = Marshal.AllocCoTaskMem(sizeOfStruct * _logicalCpus);
+            IntPtr ptr = Marshal.AllocCoTaskMem(sizeOfStruct * _logicalCores);
             IntPtr thisProcessor = Marshal.AllocCoTaskMem(sizeOfStruct);
 
             try {
-                uint status = CallNtPowerInformation(11, IntPtr.Zero, 0, ptr, (uint)(sizeOfStruct * _logicalCpus)); //SystemBatteryState = 5, ProcessorPowerInformation = 11
+                uint status = CallNtPowerInformation(11, IntPtr.Zero, 0, ptr, (uint)(sizeOfStruct * _logicalCores)); //SystemBatteryState = 5, ProcessorPowerInformation = 11
                 if (status == 0) //= NT_STATUS_SUCCESS
                 {
-                    byte[] bytes = new byte[sizeOfStruct * _logicalCpus];
-                    Marshal.Copy(ptr, bytes, 0, sizeOfStruct * _logicalCpus);
+                    byte[] bytes = new byte[sizeOfStruct * _logicalCores];
+                    Marshal.Copy(ptr, bytes, 0, sizeOfStruct * _logicalCores);
 
                     //parse each processor
-                    for (int logical_cpu = 0; logical_cpu < _logicalCpus; logical_cpu++) {
+                    for (int logical_cpu = 0; logical_cpu < _logicalCores; logical_cpu++) {
                         Marshal.Copy(bytes, sizeOfStruct * logical_cpu, thisProcessor, sizeOfStruct);
                         PROCESSOR_POWER_INFORMATION info = ((PROCESSOR_POWER_INFORMATION)Marshal.PtrToStructure(thisProcessor, typeOfStruct));
-                        acpiStates[logical_cpu] = (short)info.CurrentIdleState;
-                        windowsFrequencies[logical_cpu] = (short)info.CurrentMhz;
+                        _acpiStates[logical_cpu] = (short)info.CurrentIdleState;
+                        _windowsFrequencies[logical_cpu] = (short)info.CurrentMhz;
                         //Debug.WriteLine(logical_cpu + ": " + acpiStates[logical_cpu]);
                     }
-                } else if (status == 3221225485) //C000000D 
-                {
-                    Console.WriteLine("An invalid parameter was passed to a service or function.");
+                } else if (status == 3221225485) { //C000000D 
+                    error = "An invalid parameter was passed to a service or function.";
                 } else {
-                    Console.WriteLine("CallNtPowerInformation failed. Status: " + status + ". A list of all status codes can be found in hex format at http://nologs.com/ntstatus.html");
+                    error = "CallNtPowerInformation failed. Status: " + status + ". A list of all status codes can be found in hex format at http://nologs.com/ntstatus.html";
                 }
-
-                //indicate we went through this
-                executedCorrectly = true;
             } catch (Exception ex) {
-                Console.WriteLine(ex.Message);
+                error = ex.Message;
             } finally {
                 Marshal.FreeCoTaskMem(ptr);
                 Marshal.FreeCoTaskMem(thisProcessor);
             }
-            return executedCorrectly;
-
+            return error;
         }
-
-         */
 
         /// <summary>
         /// to know how much cores a group contains
@@ -295,5 +321,33 @@ namespace HMTProxy {
         /// <returns></returns>
         [DllImport("kernel32.dll")]
         private static extern uint GetActiveProcessorCount(ushort groupNumber); //Must be at the end of the file, otherwise RGiesecke.DllExport.DllExport marked functions will nog get linked. 
+
+        /// <summary>
+        /// Use this function to request power information of the system (informationlevel 11 for processor information)
+        /// </summary>
+        /// <param name="InformationLevel">specify which information you want to know, has to be a value of the POWER_INFORMATION_LEVEL enum</param>
+        /// <param name="lpInputBuffer">pointer to the input buffer</param>
+        /// <param name="nInputBufferSize">size of the input buffer in bytes</param>
+        /// <param name="lpOutputBuffer">pointer to the output buffer</param>
+        /// <param name="nOutputBufferSize">size of the output buffer in bytes</param>
+        /// <returns>NT_STATUS_SUCCESS (= 0) on succes, otherwise error code</returns>
+        [DllImport("powrprof.dll", SetLastError = true)]
+        private static extern UInt32 CallNtPowerInformation(
+             Int32 InformationLevel,
+             IntPtr lpInputBuffer,
+             UInt32 nInputBufferSize,
+             IntPtr lpOutputBuffer,
+             UInt32 nOutputBufferSize
+             );
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct PROCESSOR_POWER_INFORMATION {
+            public uint Number; //ulong in WIN32 API = uint in 64bit c#
+            public uint MaxMhz;
+            public uint CurrentMhz;
+            public uint MhzLimit;
+            public uint MaxIdleState;
+            public uint CurrentIdleState;
+        }
     }
 }
