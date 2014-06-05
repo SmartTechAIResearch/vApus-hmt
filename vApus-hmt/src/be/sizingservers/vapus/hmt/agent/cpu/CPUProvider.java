@@ -21,11 +21,13 @@ public class CPUProvider {
     public CPUProvider() throws Exception {
         loadCPUID();
 
-        //if (this.vendor.equals("GenuineIntel")) {
-        this.cpu = new IntelCPU(this.family, this.model);
-        //} else {
-        //this.cpu = new AMDCPU(this.family, this.model, this.logicalCores, this.logicalCoresPerPackage, this.physicalCores, this.packages);
-        //}
+        if (this.vendor.equalsIgnoreCase("GenuineIntel")) {
+            this.cpu = new IntelCPU(this.family, this.model);
+        } else if (this.vendor.equalsIgnoreCase("AuthenticAMD")) {
+            this.cpu = new AMDCPU(this.family, this.model);
+        } else {
+            throw new Exception("Cpu not supported.");
+        }
     }
 
     private void loadCPUID() {
@@ -73,8 +75,4 @@ public class CPUProvider {
     public CPU getCPU() {
         return this.cpu;
     }
-
-//    public float getBusClockFrequencyInMhz() {
-//        return cpuImplementation.getBusClockFrequencyInMhz();
-//    }
 }

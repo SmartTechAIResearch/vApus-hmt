@@ -214,7 +214,7 @@ public class IntelCPU extends CPU {
     }
 
     @Override
-    public float getBusClockFrequencyInMhz() {
+    protected float getBusClockFrequencyInMhz() {
         if (this.sandyBridge || this.ivyBridge) {
             return 100f;
         }
@@ -228,8 +228,8 @@ public class IntelCPU extends CPU {
 
             Entity entity = new Entity(HostName.get(), true);
 
-            for (int core = 0; core != this.physicalCores; core++) {
-                CounterInfo counterInfo = new CounterInfo("physical core " + core);
+            for (int core = 0; core != super.physicalCores; core++) {
+                CounterInfo counterInfo = new CounterInfo("Physical core " + core);
                 counterInfo.getSubs().add(new CounterInfo("C0(%)"));
                 counterInfo.getSubs().add(new CounterInfo("C1(%)"));
                 counterInfo.getSubs().add(new CounterInfo("C3(%)"));
@@ -239,7 +239,7 @@ public class IntelCPU extends CPU {
                     counterInfo.getSubs().add(new CounterInfo("C7(%)"));
                 }
 
-                counterInfo.getSubs().add(new CounterInfo("ACPI C state"));
+                counterInfo.getSubs().add(new CounterInfo("ACPI C State"));
 
                 if (super.getOSIsWindows()) {
                     counterInfo.getSubs().add(new CounterInfo("Windows Frequency(Mhz)"));
@@ -252,8 +252,8 @@ public class IntelCPU extends CPU {
                 entity.getSubs().add(counterInfo);
             }
 
-            for (int p = 0; p != this.packages; p++) {
-                CounterInfo counterInfo = new CounterInfo("package " + p);
+            for (int p = 0; p != super.packages; p++) {
+                CounterInfo counterInfo = new CounterInfo("Package " + p);
                 counterInfo.getSubs().add(new CounterInfo("Multiplier"));
                 counterInfo.getSubs().add(new CounterInfo("Frequency(Mhz)"));
 
@@ -312,7 +312,7 @@ public class IntelCPU extends CPU {
             //If the timestampctr cannot be read, c states cannot be calculated.
             BigInteger timestampctr = BigInteger.ZERO;
 
-            if (name.startsWith("physical core ")) {
+            if (name.startsWith("Physical core ")) {
                 core = new Integer(name.substring("physical core ".length()));
 
                 timestampctr = getTimestampCtr(core, currentTimestampCtrs);
@@ -320,7 +320,7 @@ public class IntelCPU extends CPU {
                 calculateCoreCStates(core, timestampctr, info);
                 calculateOtherCoreStuff(core, info);
 
-            } else if (name.startsWith("package ")) {
+            } else if (name.startsWith("Package ")) {
                 int packageIndex = new Integer(name.substring("package ".length()));
                 core = this.packageRepresentativeCores.get(packageIndex);
 
@@ -459,7 +459,7 @@ public class IntelCPU extends CPU {
             String name = sub.getName();
 
             int value = -2;
-            if (name.equalsIgnoreCase("ACPI C state")) {
+            if (name.equalsIgnoreCase("ACPI C State")) {
                 value = HMTProxy.INSTANCE.getACPICState(core, this.hyperThreadingEnabled);
             } else if (name.equalsIgnoreCase("Windows Frequency(Mhz)")) {
                 value = HMTProxy.INSTANCE.getWindowsFrequency(core, this.hyperThreadingEnabled);

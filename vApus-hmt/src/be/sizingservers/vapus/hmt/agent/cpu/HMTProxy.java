@@ -23,7 +23,6 @@ public interface HMTProxy extends Library {
     public String getLastError();
     
     public int getLogicalCores();
-    public int getLogicalCoresPerPackage();
     public int getPhysicalCores();
     public int getPackages();
     

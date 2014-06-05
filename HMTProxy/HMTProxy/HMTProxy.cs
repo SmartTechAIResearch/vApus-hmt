@@ -65,12 +65,6 @@ namespace HMTProxy {
         }
 
         [RGiesecke.DllExport.DllExport]
-        public static int getLogicalCoresPerPackage() {
-            if (_logicalCoresPerPackage == 0) _logicalCoresPerPackage = Convert.ToInt32(GetActiveProcessorCount(0)); //The same for all groups.
-            return _logicalCoresPerPackage;
-        }
-
-        [RGiesecke.DllExport.DllExport]
         public static int getPhysicalCores() {
             if (_physicalCores == 0) DetermineNumberOfPhysicalCoresAndPackages();
             return _physicalCores;
@@ -86,7 +80,7 @@ namespace HMTProxy {
         /// </summary>
         /// <returns>number of physical cores</returns>
         private static void DetermineNumberOfPhysicalCoresAndPackages() {
-            foreach (var item in new System.Management.ManagementObjectSearcher("Select * from Win32_Processor").Get()) {
+            foreach (var item in new System.Management.ManagementObjectSearcher("Select NumberOfCores from Win32_Processor").Get()) {
                 _physicalCores += int.Parse(item["NumberOfCores"].ToString());
                 _packages++;
             }

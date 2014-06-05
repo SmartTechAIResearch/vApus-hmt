@@ -21,7 +21,7 @@ public abstract class CPU {
 
     protected String vendor;
     protected final long family, model;
-    protected int logicalCores, logicalCoresPerPackage, physicalCores, packages;
+    protected int logicalCores, physicalCores, packages;
 
     protected Entities wih;
 
@@ -35,7 +35,6 @@ public abstract class CPU {
             Agent.getLogger().log(Level.SEVERE, "Could not init HMTProxy: {0}", ex);
         }
         this.logicalCores = HMTProxy.INSTANCE.getLogicalCores();
-        this.logicalCoresPerPackage = HMTProxy.INSTANCE.getLogicalCoresPerPackage();
         this.physicalCores = HMTProxy.INSTANCE.getPhysicalCores();
         this.packages = HMTProxy.INSTANCE.getPackages();
     }

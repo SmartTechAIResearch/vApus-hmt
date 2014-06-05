@@ -16,7 +16,9 @@ namespace HMTProxyTester {
 
             HMTProxy.HMTProxy.init(Application.StartupPath);
 
-            string error = HMTProxy.HMTProxy.readMSR(0xCE, 16, 8);
+            int logicalCores = HMTProxy.HMTProxy.getLogicalCores();
+            int physicalCores = HMTProxy.HMTProxy.getPhysicalCores();
+            int packages = HMTProxy.HMTProxy.getPackages();
 
             Console.Read();
         }
