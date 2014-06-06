@@ -9,6 +9,7 @@ package be.sizingservers.vapus.agent;
 import be.sizingservers.vapus.agent.util.Entities;
 import com.google.gson.Gson;
 import java.net.Socket;
+import java.util.Timer;
 
 /**
  * Extend your own monitor implementation from this.
@@ -47,6 +48,11 @@ public abstract class Monitor {
      * Set to true when started and to false when stopped. This can be used as a check to for not trying to start the monitor twice.
      */
     protected boolean running;
+    
+    /**
+     * Use this to periodically (according to the vApus-agent.properties) poll and send wiw with counters.
+     */
+    protected Timer poller;
 
     /**
      * A empty instance only to be used to call getConfig() and getWDYH().

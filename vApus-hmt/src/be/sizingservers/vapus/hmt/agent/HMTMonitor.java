@@ -26,9 +26,8 @@ import java.util.logging.Level;
  */
 public class HMTMonitor extends Monitor {
 
-    private Timer poller;
     private PollHMTAndSend pollHmtAndSend;
-    
+
     private CPUProvider cpuProvider;
     private CPU cpu;
 
@@ -93,11 +92,11 @@ public class HMTMonitor extends Monitor {
             }
             super.running = true;
 
-            this.poller = new Timer();
+            super.poller = new Timer();
             this.pollHmtAndSend = new PollHMTAndSend(super.getWIWEntities(), super.server, super.socket, this.cpu);
 
             int interval = Properties.getSendCountersInterval();
-            this.poller.scheduleAtFixedRate(this.pollHmtAndSend, 0, interval);
+            super.poller.scheduleAtFixedRate(this.pollHmtAndSend, 0, interval);
         } catch (Exception ex) {
             stop();
             Agent.getLogger().log(Level.SEVERE, "Failed at starting the wmi monitor: {0}", ex);
@@ -111,9 +110,9 @@ public class HMTMonitor extends Monitor {
         }
         super.running = false;
 
-        this.poller.cancel();
-        this.poller.purge();
-        this.poller = null;
+        super.poller.cancel();
+        super.poller.purge();
+        super.poller = null;
 
         this.pollHmtAndSend.cancel();
         this.pollHmtAndSend = null;

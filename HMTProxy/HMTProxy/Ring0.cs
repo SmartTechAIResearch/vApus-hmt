@@ -68,33 +68,6 @@ namespace HMTProxy {
           IOCTL_OLS_WRITE_PCI_CONFIG = new IOControlCode(OLS_TYPE, 0x852,
             IOControlCode.Access.Write);
 
-        private static bool ExtractDriver(string fileName) {
-            string resourceName = "Nehalem." +
-              (IntPtr.Size == 4 ? "WinRing0.sys" : "WinRing0x64.sys");
-
-            string[] names =
-              Assembly.GetExecutingAssembly().GetManifestResourceNames();
-            byte[] buffer = null;
-            for (int i = 0; i < names.Length; i++) {
-                if (names[i].Replace('\\', '.') == resourceName) {
-                    using (Stream stream = Assembly.GetExecutingAssembly().
-                      GetManifestResourceStream(names[i])) {
-                        buffer = new byte[stream.Length];
-                        stream.Read(buffer, 0, buffer.Length);
-                    }
-                }
-            }
-
-            if (buffer == null)
-                return false;
-
-            using (FileStream target = new FileStream(fileName, FileMode.Create)) {
-                target.Write(buffer, 0, buffer.Length);
-            }
-
-            return true;
-        }
-
         public static void Open() {
             // no implementation for unix systems
             int p = (int)Environment.OSVersion.Platform;
@@ -109,34 +82,6 @@ namespace HMTProxy {
 
             _driver = new KernelDriver("WinRing0_1_2_0");
             _driver.Open();
-
-            if (!_driver.IsOpen) {
-                // driver is not loaded, try to reinstall and open
-
-                _driver.Delete();
-                string fileName = Path.GetTempFileName();
-                if (ExtractDriver(fileName)) {
-                    if (_driver.Install(fileName)) {
-                        File.Delete(fileName);
-                        _driver.Open();
-
-                        if (!_driver.IsOpen) {
-                            _driver.Delete();
-                            _report.AppendLine("Status: Opening driver failed");
-                        }
-                    } else {
-                        _report.AppendLine("Status: Installing driver \"" +
-                          fileName + "\" failed" +
-                          (File.Exists(fileName) ? " and file exists" : ""));
-                        _report.AppendLine();
-                        _report.Append("Exception: " + Marshal.GetExceptionForHR(
-                          Marshal.GetHRForLastWin32Error()).Message);
-                    }
-                } else {
-                    _report.AppendLine(
-                      "Status: Extracting driver to \"" + fileName + "\" failed");
-                }
-            }
 
             if (!_driver.IsOpen)
                 _driver = null;
