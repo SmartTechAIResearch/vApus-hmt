@@ -14,7 +14,8 @@ import java.net.URISyntaxException;
 import java.util.logging.Level;
 
 /**
- *
+ * All vendor specific implementations must be based on this.
+ * This also wraps reading and writing MSRs for merging and extracting eax and edx register values.
  * @author Didjeeh
  */
 public abstract class CPU {

@@ -14,7 +14,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 
 /**
- *
+ * MagnyCours, Bulldozer and Piledriver supported. Temperature reading should not be trusted.
  * @author Didjeeh
  */
 public class AMDCPU extends CPU {
@@ -176,25 +176,23 @@ public class AMDCPU extends CPU {
     }
 
     private float getCurrentNodeEnergy(int nodeIndex) {
-        byte pciDeviceId = (byte) (Registers.PCI_BASE_DEVICE + nodeIndex); //The id of the sensor
+        int pciDeviceId = Registers.PCI_BASE_DEVICE + nodeIndex; //The id of the sensor
 
         if (canCalculatePower(nodeIndex, pciDeviceId)) {
             if (!powerSensorOffsets.contains(nodeIndex)) {
                 //Use the previous node index.
-                pciDeviceId = (byte) (Registers.PCI_BASE_DEVICE + nodeIndex - 1);
+                pciDeviceId = Registers.PCI_BASE_DEVICE + nodeIndex - 1;
             }
 
-            long pciAddress = HMTProxy.INSTANCE.getPciAddress((byte) 0x0, pciDeviceId, (byte) 0x4);//Function 4
-
-            long value = HMTProxy.INSTANCE.readPciConfig(pciAddress, Registers.REG_BASE_PROCESSOR_TDP);
+            
+            long value = HMTProxy.INSTANCE.readPciConfig(0x0, pciDeviceId, 0x4, Registers.REG_BASE_PROCESSOR_TDP);
             long base_tdp = value >> 16;
 
-            pciAddress = HMTProxy.INSTANCE.getPciAddress((byte) 0x0, pciDeviceId, (byte) 0x5);//Function 5
-            value = HMTProxy.INSTANCE.readPciConfig(pciAddress, Registers.REG_TDP_RUNNING_AVERAGE);
+            value = HMTProxy.INSTANCE.readPciConfig(0x0, pciDeviceId, 0x5, Registers.REG_TDP_RUNNING_AVERAGE);
             long running_avg_capture = (value >> 4) & 0x3fffff;
             int running_avg_range = (int) ((value & 0xf) + 1);
 
-            value = HMTProxy.INSTANCE.readPciConfig(pciAddress, Registers.REG_TDP_LIMIT3);
+            value = HMTProxy.INSTANCE.readPciConfig(0x0, pciDeviceId, 0x5, Registers.REG_TDP_LIMIT3);
             long tdp_limit = value >> 16;
             long tdp2watt = ((value & 0x3ff) << 6) | ((value >> 10) & 0x3ff);
 
@@ -221,21 +219,18 @@ public class AMDCPU extends CPU {
         return 0f;
     }
 
-    private boolean canCalculatePower(int nodeIndex, byte pciDeviceId) {
+    private boolean canCalculatePower(int nodeIndex, int pciDeviceId) {
         //Strange quirk that must be applied to the current northbridge, otherwise the tdp running average register will not be updated.
         //Must be done per "node device id", aka for non existing devices. I guess there are duplicate registers.
         if (!this.canCalculatePowerNodes[nodeIndex]) {
-
-            long pciAddress = HMTProxy.INSTANCE.getPciAddress((byte) 0x0, pciDeviceId, (byte) 0x5);//Function 5
-            //if (pciAddress == 0xFFFFFFFF) { //Invalid address  }
-
-            long value = HMTProxy.INSTANCE.readPciConfig(pciAddress, Registers.REG_TDP_RUNNING_AVERAGE);
+            
+            long value = HMTProxy.INSTANCE.readPciConfig(0x0, pciDeviceId, 0x5, Registers.REG_TDP_RUNNING_AVERAGE);
 
             if ((value & 0xF) == 0xe) {
                 value &= 0xfffffff0;
                 value |= 0x9;
 
-                String error = HMTProxy.INSTANCE.writePciConfig(pciAddress, Registers.REG_TDP_RUNNING_AVERAGE, value);
+                String error = HMTProxy.INSTANCE.writePciConfig(0x0, pciDeviceId, 0x5, Registers.REG_TDP_RUNNING_AVERAGE, value);
 
                 if (error.length() == 0) {
                     this.canCalculatePowerNodes[nodeIndex] = true;
@@ -249,11 +244,9 @@ public class AMDCPU extends CPU {
     }
 
     private float getCurrentNodeTemperature(int nodeIndex) {
-        byte pciDeviceId = (byte) (Registers.PCI_BASE_DEVICE + nodeIndex); //The id of the sensor
+        int pciDeviceId =  Registers.PCI_BASE_DEVICE + nodeIndex; //The id of the sensor
 
-        long pciAddress = HMTProxy.INSTANCE.getPciAddress((byte) 0x0, pciDeviceId, (byte) 0x3);//Function 3
-
-        long value = HMTProxy.INSTANCE.readPciConfig(pciAddress, Registers.REPORTED_TEMPERATURE_CONTROL_REGISTER);
+        long value = HMTProxy.INSTANCE.readPciConfig(0x0, pciDeviceId, 0x3, Registers.REPORTED_TEMPERATURE_CONTROL_REGISTER);
 
         return ((float) ((value >> 21) & 0x7FF)) / 8.0f; //+ coreTemperature.Parameters[0].Value; //this is value 0, meaning 0 offset
     }

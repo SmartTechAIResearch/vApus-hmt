@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 namespace HMTProxy {
     public class HMTProxy {
         private static string _resolvePath;
-        private static int _logicalCores, _logicalCoresPerPackage, _physicalCores, _packages;
+        private static int _logicalCores, _physicalCores, _packages;
 
         private static uint _msrEAX, _msrEDX;
 
@@ -202,14 +202,9 @@ namespace HMTProxy {
         }
 
         [RGiesecke.DllExport.DllExport]
-        public static uint getPciAddress(byte bus, byte device, byte function) {
-            return Ring0.GetPciAddress(bus, device, function);
-        }
-
-        [RGiesecke.DllExport.DllExport]
-        public static uint readPciConfig(uint pciAddress, uint regAddress) {
+        public static uint readPciConfig(int bus, int device, int function, uint regAddress) {
             uint value;
-            Ring0.ReadPciConfig(pciAddress, regAddress, out value);
+            Ring0.ReadPciConfig(Ring0.GetPciAddress(Convert.ToByte(bus), Convert.ToByte(device), Convert.ToByte(function)), regAddress, out value);
             return value;
         }
 
@@ -221,9 +216,11 @@ namespace HMTProxy {
         /// <param name="value"></param>
         /// <returns>error if any</returns>
         [RGiesecke.DllExport.DllExport]
-        public static string writePciConfig(uint pciAddress, uint regAddress, uint value) {
+        public static string writePciConfig(int bus, int device, int function, uint regAddress, uint value) {
             string error = string.Empty;
-            if (!Ring0.WritePciConfig(pciAddress, regAddress, value)) {
+            uint pciAddress;
+
+            if (!Ring0.ReadPciConfig(Ring0.GetPciAddress(Convert.ToByte(bus), Convert.ToByte(device), Convert.ToByte(function)), regAddress, out pciAddress) || !Ring0.WritePciConfig(pciAddress, regAddress, value)) {
                 error = "Error while writing to pci address 0x" + pciAddress.ToString("X8") + " (" + pciAddress + ")";
 
                 try {

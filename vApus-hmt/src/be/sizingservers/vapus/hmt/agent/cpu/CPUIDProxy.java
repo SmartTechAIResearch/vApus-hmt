@@ -10,7 +10,7 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 /**
- *
+ * JNA proxy to a binary that works on Windows and Linux.
  * @author Didjeeh
  */
 public interface CPUIDProxy extends Library {

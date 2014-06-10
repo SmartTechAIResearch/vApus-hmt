@@ -13,7 +13,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 
 /**
- *
+ * Nehalem, Westmere, SandyBridge and IvyBridge supported.
  * @author Didjeeh
  */
 public class IntelCPU extends CPU {

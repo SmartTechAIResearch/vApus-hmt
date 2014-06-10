@@ -9,7 +9,7 @@ package be.sizingservers.vapus.hmt.agent.cpu;
 import java.nio.ByteBuffer;
 
 /**
- *
+ * Provides an implementation of CPU based on the manufacturer read from cpuid.
  * @author Didjeeh
  */
 public class CPUProvider {
@@ -26,7 +26,7 @@ public class CPUProvider {
         } else if (this.vendor.equalsIgnoreCase("AuthenticAMD")) {
             this.cpu = new AMDCPU(this.family, this.model);
         } else {
-            throw new Exception("Cpu not supported.");
+            throw new Exception("CPU not supported.");
         }
     }
 

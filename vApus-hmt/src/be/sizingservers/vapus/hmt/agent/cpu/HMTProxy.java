@@ -10,7 +10,8 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 /**
- *
+ * A JNA proxy to either a Windows or a Linux binary based on the os name.
+ * Provides functionality to get basic cpu info, read and write MSRs and PCI device registers, and get acpi c states (+ Win Freqs).
  * @author Didjeeh
  */
 public interface HMTProxy extends Library {
@@ -19,8 +20,6 @@ public interface HMTProxy extends Library {
     //HMTProxy INSTANCE = (HMTProxy) Native.loadLibrary("/HMTProxy.dll", HMTProxy.class);
     
     public void init(String resolvePath);
-    
-    public String getLastError();
     
     public int getLogicalCores();
     public int getPhysicalCores();
@@ -56,16 +55,25 @@ public interface HMTProxy extends Library {
      */
     public String writeMSR(long msr, long eax, long edx);
     
-    public long getPciAddress(byte bus, byte device, byte function);
-    public long readPciConfig(long pciAddress, long regAddress);
     /**
      * 
-     * @param pciAddress
+     * @param bus
+     * @param device
+     * @param function
+     * @param regAddress
+     * @return 
+     */
+    public long readPciConfig(int bus, int device, int function, long regAddress);
+    /**
+     * 
+     * @param bus
+     * @param device
+     * @param function
      * @param regAddress
      * @param value
-     * @return error if any
+     * @return 
      */
-    public String writePciConfig(long pciAddress, long regAddress, long value);
+    public String writePciConfig(int bus, int device, int function, long regAddress, long value);
     
     /**
      * 

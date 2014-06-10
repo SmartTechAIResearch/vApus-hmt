@@ -47,8 +47,8 @@ public class Registers {
     //AMD
     public static final long COFVID_STATUS = 0xC0010071;
     public static final byte PCI_BUS = 0;
-    public static final long PCI_BASE_DEVICE = 0x18;
-    public static final byte DEVICE_VENDOR_ID_REGISTER = 0;
+    public static final int PCI_BASE_DEVICE = 0x18;
+    public static final int DEVICE_VENDOR_ID_REGISTER = 0;
     public static final int AMD_VENDOR_ID = 0x1022;
     /* D18F4 */
     public static final long REG_BASE_PROCESSOR_TDP = 0x1b8; //Upper 16 bits = base tdp, lower 16 = processor tdp
@@ -56,4 +56,8 @@ public class Registers {
     public static final long REG_TDP_RUNNING_AVERAGE = 0xe0;
     public static final long REG_TDP_LIMIT3 = 0xe8;
     public static final long REPORTED_TEMPERATURE_CONTROL_REGISTER = 0xA4;
+
+    //TEMPERATURE and POWER
+    // Temperature --> OpenHardwareMonitor
+    // Power --> fam15h_power
 }
