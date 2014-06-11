@@ -14,7 +14,7 @@ import com.sun.jna.Native;
  * @author Didjeeh
  */
 public interface CPUIDProxy extends Library {
-    CPUIDProxy INSTANCE = (CPUIDProxy) Native.loadLibrary("/cpuid.so", CPUIDProxy.class);
+    CPUIDProxy INSTANCE = (CPUIDProxy) Native.loadLibrary(System.getProperty("os.name").startsWith("Windows") ? "/cpuid.dll" : "/cpuid.so", CPUIDProxy.class);
     
     public long load(long i);
     public long EAX();
