@@ -13,6 +13,7 @@
 #include <fcntl.h> //filecontrol
 #include <sstream> //char to unint64_t conversion
 #include <inttypes.h>
+#include <stdexcept> //Exception handling
 
 using namespace std;
 int m_logicalCores = 0, m_physicalCores = 0, m_packages = 0;
@@ -28,13 +29,17 @@ char* readString(const char *command) {
 	
 	sprintf(buffer, "%s%s", command, s);
 
-	system(buffer);
-	
-	char *tmp = (char*) malloc (100);
-	FILE *tmp_file = fopen("/tmp/tmpHMTProxy", "r");
-	fgets(tmp, 30, tmp_file);
-	fclose(tmp_file);
-	
+
+	char *tmp = (char*) malloc(100);
+		
+	try {
+		FILE *tmp_file = fopen("/tmp/tmpHMTProxy", "r");
+		fgets(tmp, 30, tmp_file);
+		fclose(tmp_file);
+	} catch(...) {
+		free(tmp);
+		throw runtime_error(string("Failed to read the output from the temp file."));
+	}
 	return tmp;
 }
 int readInt(const char *command) {	
@@ -61,7 +66,6 @@ uint64_t readUnsignedLong(const char *command) {
 extern "C" int getLogicalCores() {
 	if (m_logicalCores == 0)
 		m_logicalCores = readInt("grep \"processor\" /proc/cpuinfo |wc -l");
-	
     return m_logicalCores;
 }
 extern "C" int getPackages() {
@@ -89,23 +93,35 @@ void toEAX_EDX(uint64_t ul){
 	m_msrEAX = ul - (m_msrEDX<<32); 
 }
 extern "C" char* readMSRTx(long msr, int core){
-	const char *s = "rdmsr -p";	
-	char buffer [strlen(s) + 100];
+	try {
+		const char *s = "rdmsr -p";	
+		char buffer [strlen(s) + 100];
 	
-	sprintf(buffer, "%s%d %ld", s, core, msr);
+		sprintf(buffer, "%s%d %ld", s, core, msr);
 	
-	uint64_t ul = readUnsignedLong(buffer);
-	toEAX_EDX(ul);
+		uint64_t ul = readUnsignedLong(buffer);
+		toEAX_EDX(ul);
+	} catch (...) {
+		stringstream stream;
+		stream << "readMSRTx " << msr << ", " << core << " failed.";
+		return (char*) stream.str().c_str();
+	}
 	return (char*) "";
 }
 extern "C" char* readMSR(long msr) {
-	const char *s = "rdmsr";	
-	char buffer [strlen(s) + 100];
+	try {
+		const char *s = "rdmsr";	
+		char buffer [strlen(s) + 100];
 	
-	sprintf(buffer, "%s %ld", s, msr);
+		sprintf(buffer, "%s %ld", s, msr);
 	
-	uint64_t ul = readUnsignedLong(buffer);
-	toEAX_EDX(ul);
+		uint64_t ul = readUnsignedLong(buffer);
+		toEAX_EDX(ul);
+	} catch (...) {
+		stringstream stream;
+		stream << "readMSRTx " << msr << " failed.";
+		return (char*) stream.str().c_str();
+	}
 	return (char*) "";
 }
 
@@ -113,25 +129,35 @@ uint64_t fromEAX_EDX(long eax, long edx) {
 	return (edx<<32) | eax; 
 }
 extern "C" char* writeMSRTx(long msr, long eax, long edx, int core) {
-	uint64_t ul = fromEAX_EDX(eax, edx);
-
-	const char *s = "wrmsr -p";	
-	char buffer [strlen(s) + 100];
+	try {
+		uint64_t ul = fromEAX_EDX(eax, edx);
 	
-	sprintf(buffer, "%s%d %ld %" PRIu64, s, core, msr, ul);
-	system(buffer);
-	
+		const char *s = "wrmsr -p";	
+		char buffer [strlen(s) + 100];
+		
+		sprintf(buffer, "%s%d %ld %" PRIu64, s, core, msr, ul);
+		system(buffer);
+	} catch (...) {
+		stringstream stream;
+		stream << "writeMSRTx " << msr << core << " failed.";
+		return (char*) stream.str().c_str();
+	}
 	return (char*) "";
 }
 extern "C" char* writeMSR(long msr, long eax, long edx) {
-	uint64_t ul = fromEAX_EDX(eax, edx);
-
-	const char *s = "wrmsr";	
-	char buffer [strlen(s) + 100];
+	try {
+		uint64_t ul = fromEAX_EDX(eax, edx);
 	
-	sprintf(buffer, "%s %ld %" PRIu64, s, msr, ul);
-	system(buffer);
-	
+		const char *s = "wrmsr";	
+		char buffer [strlen(s) + 100];
+		
+		sprintf(buffer, "%s %ld %" PRIu64, s, msr, ul);
+		system(buffer);
+	} catch (...) {
+		stringstream stream;
+		stream << "writeMSR " << msr << " failed.";
+		return (char*) stream.str().c_str();
+	}
 	return (char*) "";
 }
 
