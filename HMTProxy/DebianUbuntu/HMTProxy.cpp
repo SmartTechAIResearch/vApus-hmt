@@ -18,42 +18,39 @@
 using namespace std;
 int m_logicalCores = 0, m_physicalCores = 0, m_packages = 0;
 long m_msrEAX, m_msrEDX;
-char *m_resolvePath;
-
-void executeSudoCommand(char *command){
-    stringstream s;
-    s << m_resolvePath;
-
-	stringstream stream;
-	stream << s.str() << "my_sudo" << " \"" << command << "\"";
-	//printf("exec: %s\n", stream.str().c_str());
-	system(stream.str().c_str());
-}
+bool m_lastError;
 
 extern "C" void init(char *resolvePath){
-	m_resolvePath = resolvePath;
-	
-	executeSudoCommand((char*) "modprobe msr");
+	system("modprobe msr");
 }
 
 char* readString(const char *command) {
-	const char *s = " > tmpHMTProxy";	
+    m_lastError = false;
+		
+	const char *s = " >tmpHMTProxy 2>errHMTProxy";	
 	char buffer [strlen(command) + strlen(s)];
 	
 	sprintf(buffer, "%s%s", command, s);
 	
-	executeSudoCommand((char*) buffer);
+	system(buffer);
 	
-	char *tmp = (char*) malloc(100);
+	if (FILE *err_file = fopen("errHMTProxy", "r")) {
+	    fseek(err_file, 0, SEEK_END);
+	    m_lastError = ftell(err_file) != 0;
+		fclose(err_file);
+    }
 		
-	try {
-		FILE *tmp_file = fopen("tmpHMTProxy", "r");
-		fgets(tmp, 30, tmp_file);
+	char *tmp = (char*) malloc(100);
+	if (FILE *tmp_file = fopen("tmpHMTProxy", "r")) {
+	    fgets(tmp, 30, tmp_file);
 		fclose(tmp_file);
-	} catch(...) {
-		free(tmp);
-		throw runtime_error(string("Failed to read the output from the temp file."));
+	} else {
+	    m_lastError = true;
 	}
+	
+	remove("tmpHMTProxy");
+	remove("errHMTProxy");
+	
 	return tmp;
 }
 int readInt(const char *command) {	
@@ -79,17 +76,17 @@ uint64_t readUnsignedLong(const char *command) {
 
 extern "C" int getLogicalCores() {
 	if (m_logicalCores == 0)
-		m_logicalCores = readInt("grep \\\"processor\\\" /proc/cpuinfo |wc -l");
+		m_logicalCores = readInt("grep \"processor\" /proc/cpuinfo |wc -l");
     return m_logicalCores;
 }
 extern "C" int getPackages() {
 	if(m_packages == 0) 
-		m_packages = readInt("grep \\\"physical id\\\" /proc/cpuinfo | sort | uniq |wc -l");
+		m_packages = readInt("grep \"physical id\" /proc/cpuinfo | sort | uniq |wc -l");
     return m_packages;
 }
 extern "C" int getPhysicalCores(){
 	if (m_physicalCores == 0) {
-		int cores = readInt("grep -m 1 \\\"cpu cores.*:.[0-9]*\\\" /proc/cpuinfo | cut -d':' -f2 | tr -d ' '");
+		int cores = readInt("grep -m 1 \"cpu cores.*:.[0-9]*\" /proc/cpuinfo | cut -d':' -f2 | tr -d ' '");
 
 		m_physicalCores = getPackages() * cores;
 	}
@@ -105,15 +102,15 @@ void toEAX_EDX(uint64_t ul){
 	m_msrEAX = ul - (m_msrEDX<<32); 
 }
 extern "C" char* readMSRTx(long msr, int core){
-	try {
-		const char *s = "rdmsr --decimal -p";	
-		char buffer [strlen(s) + 100];
+	const char *s = "rdmsr --decimal -p";	
+	char buffer [strlen(s) + 100];
 	
-		sprintf(buffer, "%s%d %ld", s, core, msr);
+	sprintf(buffer, "%s%d %ld", s, core, msr);
 	
-		uint64_t ul = readUnsignedLong(buffer);
-		toEAX_EDX(ul);
-	} catch (...) {
+	uint64_t ul = readUnsignedLong(buffer);
+	toEAX_EDX(ul);
+	
+	if (m_lastError) {
 		stringstream stream;
 		stream << "readMSRTx " << msr << ", " << core << " failed.";
 		return (char*) stream.str().c_str();
@@ -121,15 +118,15 @@ extern "C" char* readMSRTx(long msr, int core){
 	return (char*) "";
 }
 extern "C" char* readMSR(long msr) {
-	try {
-		const char *s = "rdmsr --decimal";	
-		char buffer [strlen(s) + 100];
+	const char *s = "rdmsr --decimal";	
+	char buffer [strlen(s) + 100];
 	
-		sprintf(buffer, "%s %ld", s, msr);
+	sprintf(buffer, "%s %ld", s, msr);
 	
-		uint64_t ul = readUnsignedLong(buffer);
-		toEAX_EDX(ul);
-	} catch (...) {
+	uint64_t ul = readUnsignedLong(buffer);
+	toEAX_EDX(ul);
+	
+	if (m_lastError) {
 		stringstream stream;
 		stream << "readMSRTx " << msr << " failed.";
 		return (char*) stream.str().c_str();
@@ -141,38 +138,34 @@ uint64_t fromEAX_EDX(long eax, long edx) {
 	return (edx<<32) | eax; 
 }
 extern "C" char* writeMSRTx(long msr, long eax, long edx, int core) {
-	try {
-		uint64_t ul = fromEAX_EDX(eax, edx);
+	uint64_t ul = fromEAX_EDX(eax, edx);
 	
-		const char *s = "wrmsr -p";	
-		char buffer [strlen(s) + 100];
+	const char *s = "wrmsr -p";	
+	char buffer [strlen(s) + 100];
 		
-		sprintf(buffer, "%s%d %ld %" PRIu64, s, core, msr, ul);
+	sprintf(buffer, "%s%d %ld %" PRIu64, s, core, msr, ul);
 		
-		//stringstream stream;
-		//stream << "echo " << buffer;
-		//system(stream.str().c_str());
-		
-		executeSudoCommand((char*) buffer);
-	} catch (...) {
+	system(buffer);
+	
+	if (m_lastError) {
 		stringstream stream;
-		stream << "writeMSRTx " << msr << core << " failed.";
+		stream << "writeMSRTx " << msr << " core " << core << " value " << ul << " failed.";
 		return (char*) stream.str().c_str();
 	}
 	return (char*) "";
 }
 extern "C" char* writeMSR(long msr, long eax, long edx) {
-	try {
-		uint64_t ul = fromEAX_EDX(eax, edx);
+	uint64_t ul = fromEAX_EDX(eax, edx);
 	
-		const char *s = "wrmsr";	
-		char buffer [strlen(s) + 100];
+	const char *s = "wrmsr";	
+	char buffer [strlen(s) + 100];
 		
-		sprintf(buffer, "%s %ld %" PRIu64, s, msr, ul);
-		executeSudoCommand((char*) buffer);
-	} catch (...) {
+	sprintf(buffer, "%s %ld %" PRIu64, s, msr, ul);
+	system(buffer);
+	
+	if (m_lastError) {
 		stringstream stream;
-		stream << "writeMSR " << msr << " failed.";
+		stream << "writeMSR " << msr << " value " << ul << " failed.";
 		return (char*) stream.str().c_str();
 	}
 	return (char*) "";
@@ -193,12 +186,12 @@ extern "C" char* writePciConfig(short bus, short device, short function, long re
 	
 	sprintf(buffer, "%s%i:%i.%i %ld.L=%ld", s, bus, device, function, regAddress, value);
 	
-	executeSudoCommand((char*) buffer);
+	system(buffer);
 	return (char*) "";
 }
 
 extern "C" int getACPICState(int core, bool hyperThreading){
-	char str[300], temp[130], filename[200];
+	char str[300], filename[200];
 
     sprintf(filename, "/proc/acpi/processor/CPU%X/power", core);
 
@@ -220,18 +213,10 @@ extern "C" int getACPICState(int core, bool hyperThreading){
     return -1;
 }
 /*
-int main(int args, char *argv[]) {
-    stringstream stream;
-	stream << "./my_sudo";
-	my_sudo = (char*) stream.str().c_str();
-	
-    //writeMSRTx(0,0,0,0);
-    //readMSR(0x198);
-    printf(" physical cores: %i", getPhysicalCores());
-    readMSR(0x198);
+int main( int argc, const char* argv[] ){
+    printf("%s", readMSRTx(206, 0));
     
-    printf(" MSR bla: %ld", getMSREAX()); 
-}
-*/
-
+    toEAX_EDX(30064771087);
+    printf("%s", writeMSRTx(911, m_msrEAX, m_msrEDX, 0));
+}*/
 #endif // HMTPROXY_H

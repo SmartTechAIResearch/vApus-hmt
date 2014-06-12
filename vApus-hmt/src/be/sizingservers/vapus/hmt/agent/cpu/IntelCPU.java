@@ -14,6 +14,7 @@ import java.util.HashMap;
 
 /**
  * Nehalem, Westmere, SandyBridge and IvyBridge supported.
+ *
  * @author Didjeeh
  */
 public class IntelCPU extends CPU {
@@ -28,6 +29,7 @@ public class IntelCPU extends CPU {
     private final long maxProcessorTemp; //ProcessorHot temp. From this point the core will be throtled (= maximum temp)
 
     private final boolean pp1Available; //Possible not available for servers (graphics core).
+    private final boolean dramAvailable; //Only available for servers.
 
     private final boolean packageTemperatureAvailable;
 
@@ -70,6 +72,7 @@ public class IntelCPU extends CPU {
         this.maxProcessorTemp = super.readMSR(Registers.MSR_IA32_TEMPERATURE_TARGET, 23, 16).longValue();
 
         this.pp1Available = getPP1Available();
+        this.dramAvailable = getDRAMAvailable();
 
         this.packageTemperatureAvailable = getPackageTemperatureAvailable();
 
@@ -190,6 +193,15 @@ public class IntelCPU extends CPU {
         }
     }
 
+    private boolean getDRAMAvailable() {
+        try {
+            super.readMSR(Registers.MSR_DRAM_ENERGY_STATUS, 32, 0, 0);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
     private boolean getPackageTemperatureAvailable() {
     // http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3b-part-2-manual.pdf 1.4.8
 
@@ -273,7 +285,9 @@ public class IntelCPU extends CPU {
                         counterInfo.getSubs().add(new CounterInfo("PP1(W)"));
                     }
 
-                    counterInfo.getSubs().add(new CounterInfo("DRAM(W)"));
+                    if (this.dramAvailable) {
+                        counterInfo.getSubs().add(new CounterInfo("DRAM(W)"));
+                    }
                 }
 
                 if (this.packageTemperatureAvailable) {
