@@ -1,0 +1,9 @@
+Copyright 2014 (c) Sizing Servers Lab
+University College of West-Flanders, Department GKG
+
+Author(s):
+	Dieter Vandroemme
+
+Linux only!
+Copy start-as-daemon.sh, stop-daemon.sh and config to the directory holding the agent jar (probably dist).
+Do not forget to edit config. The name of the agent at the first line (Case-sensitive, example:vApus-dstat) and the default port the agent listens at on the second line (Example:5556).

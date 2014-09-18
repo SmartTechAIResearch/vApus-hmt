@@ -56,7 +56,10 @@ public class IntelCPU extends CPU {
 
         determineArchitecture();
 
-        initMSRs();
+        try{        
+            initMSRs(); 
+        }catch(Exception ex){          
+        }
 
         this.hyperThreadingEnabled = this.logicalCores > this.physicalCores;
 

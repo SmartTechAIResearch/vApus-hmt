@@ -11,6 +11,17 @@
     <description>Builds, tests, and runs the project vApus-hmt.</description>
     <import file="nbproject/build-impl.xml"/>
     
+    <target name="-post-jar"> 
+        <copy file="src/cygwin1.dll" flatten="true" todir="${dist.dir}"/> 
+        <copy file="src/InstallDriver.exe" flatten="true" todir="${dist.dir}"/> 
+        <copy file="src/WinRing0x64.dll" flatten="true" todir="${dist.dir}"/> 
+        <copy file="src/WinRing0x64.sys" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/cygwin1.dll" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/daemon/config" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/daemon/DAEMONREADME" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/daemon/start-as-daemon.sh" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/daemon/stop-daemon.sh" flatten="true" todir="${dist.dir}"/>
+    </target>
     <!--
     There exist several targets which are by default empty and which can be 
     used for execution of your tasks. These targets are usually executed 
