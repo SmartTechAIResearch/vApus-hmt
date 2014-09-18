@@ -10,7 +10,6 @@
 # Parse the given arguments.
 if [ "$1" == --help -o "$1" == -h ]; then
     echo "Synopsis: ./stop-daemon.sh [--help (-h)]"
-    echo "Remarks: Reads the id for the process to kill from the file pid"
     exit 0
 fi
 
@@ -35,7 +34,7 @@ fi
 
 if [ "$AGENT" == "" ]; then
     echo "The agent name should be at the first line of a file config in the directory containing this script."
-    echo "It is recommended to put the default port the agent will listen on on the second line."
+    echo "It is recommended to put the default port the agent will listen at on the second line."
     exit -1
 fi
 

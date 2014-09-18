@@ -13,21 +13,6 @@
 #
 # Please make sure that you have read and write rights on the directory containing this script. 
 
-# Parse the given arguments.
-PORTSTATEMENT=""
-if [ "$1" == --help -o "$1" == -h ]; then
-    echo "Synopsis: ./start-as-daemon.sh [--help (-h) | --port (-p) X]; ommitting --port X will start listening at $PORT"
-    exit 0
-elif [ "$1" == --port -o "$1" == -p ]; then
-    if [ "$2" != "" ]; then
-        # Determine if the given port is a number.
-        re='^[0-9]+$'
-        if [[ $2 =~ $re ]]; then
-            PORTSTATEMENT="-p $2"
-        fi
-    fi
-fi
-
 # Parse the config file.
 AGENT=""
 DEFAULTPORT="the default port"
@@ -43,11 +28,13 @@ if [ -f config ]; then
                 #    echo "Expected a wellformed filename for an agent as first entry of config. (vApus* without spaces)"
                 #    exit -1
                 # fi
-            elif [ "$DEFAULTPORT" == "" ]; then
+            elif [ "$DEFAULTPORT" == "the default port" ]; then
                 DEFAULTPORT=$trimmedLine
                 # Determine if the given port is a number.
                 re='^[0-9]+$'
-                if [![ "$DEFAULTPORT" =~ $re ]]; then
+                if [[ "$DEFAULTPORT" =~ $re ]]; then
+                    DEFAULTPORT=$trimmedLine
+                else
                     echo "Expected a numeric value for a port as second entry of config."
                     exit -1
                 fi
@@ -57,9 +44,24 @@ if [ -f config ]; then
     done < config
 fi
 
+# Parse the given arguments.
+PORTSTATEMENT=""
+if [ "$1" == --help -o "$1" == -h ]; then
+    echo "Synopsis: ./start-as-daemon.sh [--help (-h) | --port (-p) X]; ommitting --port X will start listening at $DEFAULTPORT"
+    exit 0
+elif [ "$1" == --port -o "$1" == -p ]; then
+    if [ "$2" != "" ]; then
+        # Determine if the given port is a number.
+        re='^[0-9]+$'
+        if [[ $2 =~ $re ]]; then
+            PORTSTATEMENT="-p $2"
+        fi
+    fi
+fi
+
 if [ "$AGENT" == "" ]; then
     echo "The agent name should be at the first line of a file config in the directory containing this script."
-    echo "It is recommended to put the default port the agent will listen on on the second line."
+    echo "It is recommended to put the default port the agent will listen at on the second line."
     exit -1
 fi
 
