@@ -20,7 +20,17 @@
         <copy file="src/daemon/config" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/DAEMONREADME" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/start-as-daemon.sh" flatten="true" todir="${dist.dir}"/>
-        <copy file="src/daemon/stop-daemon.sh" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/daemon/stop-daemon.sh" flatten="true" todir="${dist.dir}"/>        
+        <echo file="${dist.dir}/README.txt">Dependencies:
+### Linux
+* root privileges
+* JRE6 or more recent (default-jre-headless package for Debian)
+* msr-tools (Debian package in the default repositories)
+
+### Windows
+* Administrator privileges
+* .Net 2.0 or 3.5
+* .Net 4.0</echo> 
     </target>
     <!--
     There exist several targets which are by default empty and which can be 
