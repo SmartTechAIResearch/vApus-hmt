@@ -16,7 +16,6 @@
         <copy file="src/InstallDriver.exe" flatten="true" todir="${dist.dir}"/> 
         <copy file="src/WinRing0x64.dll" flatten="true" todir="${dist.dir}"/> 
         <copy file="src/WinRing0x64.sys" flatten="true" todir="${dist.dir}"/>
-        <copy file="src/cygwin1.dll" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/config" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/DAEMONREADME" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/start-as-daemon.sh" flatten="true" todir="${dist.dir}"/>

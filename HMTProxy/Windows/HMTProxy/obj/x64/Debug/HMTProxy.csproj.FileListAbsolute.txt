@@ -1,0 +1,8 @@
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\Build\WinRing0x64.sys
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\Build\InstallDriver.exe
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\Build\WinRing0x64.dll
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\Build\HMTProxy.dll
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\Build\HMTProxy.pdb
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\HMTProxy\obj\x64\Debug\HMTProxy.dll
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\HMTProxy\obj\x64\Debug\HMTProxy.pdb
+C:\Users\Didjeeh\Desktop\vApus-hmt\HMTProxy\Windows\HMTProxy\obj\x64\Debug\HMTProxy.csprojResolveAssemblyReference.cache
