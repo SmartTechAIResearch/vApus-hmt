@@ -20,7 +20,8 @@
         <copy file="src/daemon/DAEMONREADME" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/start-as-daemon.sh" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/stop-daemon.sh" flatten="true" todir="${dist.dir}"/>        
-        <echo file="${dist.dir}/README.txt">Dependencies:
+        <echo file="${dist.dir}/README.txt">It is possible that the agent fails the first time. This because of driver initialisation.            
+Dependencies:
 ### Linux
 * root privileges
 * JRE6 or more recent (default-jre-headless package for Debian)
