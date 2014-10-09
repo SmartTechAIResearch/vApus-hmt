@@ -1,3 +1,3 @@
 @echo off
 type README.txt
-java -jar vApus-hmt.jar
+start /wait java -jar vApus-hmt.jar
