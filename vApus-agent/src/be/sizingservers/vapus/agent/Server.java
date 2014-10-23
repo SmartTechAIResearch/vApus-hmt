@@ -151,6 +151,7 @@ public abstract class Server {
     private class AcceptThread extends Thread {
 
         private final Server server;
+        private final ArrayList<HandleRequestThread> handleRequestThreads;
 
         /**
          *
@@ -158,12 +159,16 @@ public abstract class Server {
          */
         public AcceptThread(Server server) {
             this.server = server;
+            this.handleRequestThreads = new ArrayList<HandleRequestThread>();
         }
 
         @Override
         public void run() {
             while (this.server.running) {
                 accept();
+            }
+            for (int i = 0; i != this.handleRequestThreads.size(); i++) {
+                this.handleRequestThreads.get(i).forceStop();
             }
         }
 
@@ -174,6 +179,7 @@ public abstract class Server {
 
                 try {
                     HandleRequestThread handleRequestThread = new HandleRequestThread(this.server, socket, monitor);
+                    this.handleRequestThreads.add(handleRequestThread);
                     handleRequestThread.start();
                 } catch (IOException ex) {
                     Agent.getLogger().log(Level.INFO, "Socket was closed from the other side: {0}", ex);
@@ -293,6 +299,16 @@ public abstract class Server {
                 } catch (IOException ex) {
                     cleanup();
                     throw ex;
+                }
+            }
+
+            public void forceStop() {
+                try {
+                    if (!this.socket.isClosed()) {
+                        this.socket.close();
+                    }
+                } catch (Exception ex) {
+                    //Ignore
                 }
             }
 

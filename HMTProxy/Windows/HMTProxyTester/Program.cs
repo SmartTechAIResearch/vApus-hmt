@@ -20,6 +20,8 @@ namespace HMTProxyTester {
             int physicalCores = HMTProxy.HMTProxy.getPhysicalCores();
             int packages = HMTProxy.HMTProxy.getPackages();
 
+            string basefreq = HMTProxy.HMTProxy.readMSR(206);
+
             Console.Read();
         }
     }

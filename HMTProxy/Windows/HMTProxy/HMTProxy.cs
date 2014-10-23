@@ -33,7 +33,9 @@ namespace HMTProxy {
                 Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 
                 AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-                Process.Start(Path.Combine(_resolvePath, "installdriver.exe"), "-installonly");
+                Process p = Process.Start(Path.Combine(_resolvePath, "installdriver.exe"), "-installonly");
+
+                p.WaitForExit();
 
                 Ring0.Open();
             }

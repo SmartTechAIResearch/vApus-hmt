@@ -264,12 +264,7 @@ public class BashHelper {
      * @throws IOException
      */
     public static String getPIDExecutedCommand(String command) throws IOException {
-        String processName = command;
-        if (processName.contains(" ")) {
-            processName = processName.substring(0, processName.indexOf(' '));
-        }
-
-        ProcessBuilder builder = new ProcessBuilder(BashHelper.bash, "-c", "ps aux | grep -w " + processName + " | grep -v grep | awk '{print $2}'");
+        ProcessBuilder builder = new ProcessBuilder(BashHelper.bash, "-c", "ps aux | grep -w '" + command + "' | grep -v grep | awk '{print $2}'");
         builder.redirectErrorStream(true);
 
         String[] pids = getOutput(builder.start()).split("\\r?\\n");

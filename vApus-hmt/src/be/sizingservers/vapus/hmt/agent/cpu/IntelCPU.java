@@ -56,7 +56,10 @@ public class IntelCPU extends CPU {
 
         determineArchitecture();
 
-        initMSRs();
+        try {
+            initMSRs();
+        } catch (Exception ex) {
+        }
 
         this.hyperThreadingEnabled = this.logicalCores > this.physicalCores;
 
@@ -179,7 +182,13 @@ public class IntelCPU extends CPU {
      * @throws Exception
      */
     private float getJoulesPerEnergyUnit() throws Exception {
-        long energyStatusUnits = super.readMSR(Registers.MSR_RAPL_POWER_UNIT, 13, 8).longValue();
+        long energyStatusUnits = 0L;
+
+        try {
+            energyStatusUnits = super.readMSR(Registers.MSR_RAPL_POWER_UNIT, 13, 8).longValue();
+        } catch (Exception ex) {
+            //Ignore
+        }
 
         return 1f / (float) (1 << energyStatusUnits); //is the same as (1/2)^energy_status_units
     }
