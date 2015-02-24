@@ -31,8 +31,7 @@ Dependencies:
 ### Windows
 * Administrator privileges
 * JRE6 64-bit or more recent
-* .Net 2.0 or 3.5
-* .Net 4.0</echo> 
+* .Net 4.0 or newer</echo> 
     </target>
     <!--
     There exist several targets which are by default empty and which can be 
