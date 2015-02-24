@@ -1,0 +1,7 @@
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\Build\WinRing0x64.sys
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\Build\InstallDriver.exe
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\Build\WinRing0x64.dll
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\Build\HMTProxy.dll
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\Build\HMTProxy.pdb
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\HMTProxy\obj\x64\Debug\HMTProxy.dll
+C:\Users\Dieter\Desktop\vApus-hmt\HMTProxy\Windows\HMTProxy\obj\x64\Debug\HMTProxy.pdb
