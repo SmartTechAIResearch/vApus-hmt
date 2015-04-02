@@ -103,13 +103,14 @@ public class IntelCPU extends CPU {
 
     private void determineArchitecture() {
         //All the CPU ID model numbers can be found at http://software.intel.com/en-us/articles/intel-processor-identification-with-cpuid-model-and-family-numbers/
-        if (this.model == 0x1E || this.model == 0x1A || this.model == 0x2E) {
-            //Nehalem
-        } else if (this.model == 0x25 || this.model == 0x2C || this.model == 0x2F) {
-            //Westmere
-        } else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D || this.model == 0x56) {
-            this.sandyBridgeOrNewer = true; //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D, 56 = Broadwell
-        }
+		this.sandyBridgeOrNewer = true;
+        if (this.model == 0x1E || this.model == 0x1A || this.model == 0x2E || this.model == 0x25 || this.model == 0x2C || this.model == 0x2F) {
+            //1E, 1A, 2E  = Nehalem 25, 2C 2F = Westmere
+			this.sandyBridgeOrNewer = false;
+        } 
+		//else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D) {
+            //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D = Broadwell
+        //}
         //else not supported.
     }
 
