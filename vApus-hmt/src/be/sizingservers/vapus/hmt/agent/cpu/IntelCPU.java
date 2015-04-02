@@ -107,8 +107,8 @@ public class IntelCPU extends CPU {
             //Nehalem
         } else if (this.model == 0x25 || this.model == 0x2C || this.model == 0x2F) {
             //Westmere
-        } else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D) {
-            this.sandyBridgeOrNewer = true; //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D = Broadwell
+        } else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D || this.model == 0x56) {
+            this.sandyBridgeOrNewer = true; //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D, 56 = Broadwell
         }
         //else not supported.
     }
