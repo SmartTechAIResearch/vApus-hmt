@@ -13,13 +13,13 @@ import java.util.Calendar;
 import java.util.HashMap;
 
 /**
- * Nehalem, Westmere, SandyBridge and IvyBridge supported.
+ * Nehalem, Westmere, SandyBridge, IvyBridge, Hasswell and Broadwell are supported.
  *
  * @author Didjeeh
  */
 public class IntelCPU extends CPU {
 
-    private boolean sandyBridge, ivyBridge;
+    private boolean sandyBridgeOrNewer;
 
     private final boolean hyperThreadingEnabled;
 
@@ -107,10 +107,8 @@ public class IntelCPU extends CPU {
             //Nehalem
         } else if (this.model == 0x25 || this.model == 0x2C || this.model == 0x2F) {
             //Westmere
-        } else if (this.model == 0x2A || this.model == 0x2D) {
-            this.sandyBridge = true;
-        } else if (this.model == 0x3A || this.model == 0x3E || this.model == 0x3F) {
-            this.ivyBridge = true;
+        } else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D) {
+            this.sandyBridgeOrNewer = true; //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D = Broadwell
         }
         //else not supported.
     }
@@ -236,7 +234,7 @@ public class IntelCPU extends CPU {
 
     @Override
     protected float getBusClockFrequencyInMhz() {
-        if (this.sandyBridge || this.ivyBridge) {
+        if (this.sandyBridgeOrNewer) {
             return 100f;
         }
         return 133.33f;
@@ -256,7 +254,7 @@ public class IntelCPU extends CPU {
                 counterInfo.getSubs().add(new CounterInfo("C3(%)"));
                 counterInfo.getSubs().add(new CounterInfo("C6(%)"));
 
-                if (this.sandyBridge || this.ivyBridge) {
+                if (this.sandyBridgeOrNewer) {
                     counterInfo.getSubs().add(new CounterInfo("C7(%)"));
                 }
 
@@ -278,14 +276,14 @@ public class IntelCPU extends CPU {
                 counterInfo.getSubs().add(new CounterInfo("Multiplier"));
                 counterInfo.getSubs().add(new CounterInfo("Frequency(Mhz)"));
 
-                if (this.sandyBridge || this.ivyBridge) {
+                if (this.sandyBridgeOrNewer) {
                     counterInfo.getSubs().add(new CounterInfo("PC2(%)"));
                 }
 
                 counterInfo.getSubs().add(new CounterInfo("PC3(%)"));
                 counterInfo.getSubs().add(new CounterInfo("PC6(%)"));
 
-                if (this.sandyBridge || this.ivyBridge) {
+                if (this.sandyBridgeOrNewer) {
                     counterInfo.getSubs().add(new CounterInfo("PC7(%)"));
                     counterInfo.getSubs().add(new CounterInfo("Energy(W)"));
                     counterInfo.getSubs().add(new CounterInfo("PP0(W)"));
@@ -405,7 +403,7 @@ public class IntelCPU extends CPU {
                     if (c0Time != -1f && c3Time != -1f && c6Time != -1f) {
                         c1Time = 100f - c0Time - c3Time - c6Time;
 
-                        if (this.sandyBridge || this.ivyBridge) {
+                        if (this.sandyBridgeOrNewer) {
                             c7Time = calculateC7Time(core, diffTimestamp);
                             if (c7Time == -1f) {
                                 c1Time = -1f;
