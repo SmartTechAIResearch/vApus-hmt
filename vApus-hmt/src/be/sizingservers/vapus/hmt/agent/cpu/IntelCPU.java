@@ -33,6 +33,8 @@ public class IntelCPU extends CPU {
 
     private final boolean packageTemperatureAvailable;
 
+    private float packageFrequency = -2f;
+        
     //To monitor the elapsed milliseconds between runs
     private long prevTimeStamp;
 
@@ -103,15 +105,12 @@ public class IntelCPU extends CPU {
 
     private void determineArchitecture() {
         //All the CPU ID model numbers can be found at http://software.intel.com/en-us/articles/intel-processor-identification-with-cpuid-model-and-family-numbers/
-		this.sandyBridgeOrNewer = true;
+	this.sandyBridgeOrNewer = true;
         if (this.model == 0x1E || this.model == 0x1A || this.model == 0x2E || this.model == 0x25 || this.model == 0x2C || this.model == 0x2F) {
             //1E, 1A, 2E  = Nehalem 25, 2C 2F = Westmere
-			this.sandyBridgeOrNewer = false;
+            this.sandyBridgeOrNewer = false;
         } 
-		//else if (this.model == 0x2A || this.model == 0x2D || this.model == 0x3A || this.model == 0x3E || this.model == 0x3F || this.model == 0x3D) {
-            //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D = Broadwell
-        //}
-        //else not supported.
+        //2A & 2D = SandyBridge, 3E = IvyBridge  3F = Haswell, 3D = Broadwell, 56 = Xeon D (Support?)
     }
 
     private void initMSRs() throws Exception {
@@ -326,7 +325,9 @@ public class IntelCPU extends CPU {
         HashMap<Integer, BigInteger> currentTimestampCtrs = new HashMap<Integer, BigInteger>();
         ArrayList<Integer> updatedOldTimestampCtrs = new ArrayList<Integer>(); //Holds the physical cores
 
-        for (int i = 0; i != entity.getSubs().size(); i++) {
+        HashMap<Integer, Float> packagesFrequencies = new HashMap<Integer, Float>();
+        
+         for (int i = 0; i != entity.getSubs().size(); i++) {
             CounterInfo info = entity.getSubs().get(i);
             String name = info.getName();
 
@@ -349,7 +350,17 @@ public class IntelCPU extends CPU {
                 timestampctr = getTimestampCtr(core, currentTimestampCtrs);
 
                 calculatePackageCStates(packageIndex, core, timestampctr, info);
+                
+                if(packagesFrequencies.containsKey(packageIndex)) {
+                    this.packageFrequency = packagesFrequencies.get(packageIndex);
+                }
+                else {
+                    this.packageFrequency = -2f;
+                }
+                
                 calculateOtherPackageStuff(packageIndex, core, info);
+                
+                packagesFrequencies.put(packageIndex, this.packageFrequency);
             }
 
             if (core != -1) {
@@ -555,24 +566,24 @@ public class IntelCPU extends CPU {
 
         return calculateCTime(diff, diffTimestamp);
     }
-
+    
     private void calculateOtherPackageStuff(int packageIndex, int core, CounterInfo info) throws Exception {
-        float frequency = -2f;
-
         for (int i = 0; i != info.getSubs().size(); i++) {
             CounterInfo sub = info.getSubs().get(i);
             String name = sub.getName();
 
             float value = -2f;
             if (name.equalsIgnoreCase("Multiplier")) {
-                frequency = getCurrentFrequency(core);
-                value = frequency / getBusClockFrequencyInMhz();
+                if (this.packageFrequency == -2f) {
+                    this.packageFrequency = getCurrentFrequency(core);
+                }
+                value = this.packageFrequency / getBusClockFrequencyInMhz();
 
             } else if (name.equalsIgnoreCase("Frequency(Mhz)")) {
-                if (frequency == -2f) {
-                    frequency = getCurrentFrequency(core);
+                if (this.packageFrequency == -2f) {
+                    this.packageFrequency = getCurrentFrequency(core);
                 }
-                value = frequency;
+                value = this.packageFrequency;
 
             } else if (name.equalsIgnoreCase("Energy(W)")) {
                 value = getCurrentPackageEnergy(packageIndex, core);
