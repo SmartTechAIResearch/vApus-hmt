@@ -73,6 +73,7 @@ public class Test extends Thread {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF8"));
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
 
+            writeRead(out, "name", in);
             writeRead(out, "version", in);
             writeRead(out, "config", in);
             writeRead(out, "sendCountersInterval", in);

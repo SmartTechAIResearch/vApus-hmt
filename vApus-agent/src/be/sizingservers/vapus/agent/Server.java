@@ -264,7 +264,9 @@ public abstract class Server {
                         return;
                     }
 
-                    if (message.equals("version")) {
+                    if (message.equals("name")) {
+                        message = Properties.getName();
+                    } else if (message.equals("version")) {
                         message = Properties.getVersion();
                     } else if (message.equals("copyright")) {
                         message = Properties.getCopyright();
