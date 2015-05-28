@@ -304,7 +304,7 @@ public class IntelCPU extends CPU {
                 entity.getSubs().add(counterInfo);
             }
 
-            super.wih.add(entity);
+            super.wih.getSubs().add(entity);
         }
         return super.wih;
     }
@@ -320,7 +320,7 @@ public class IntelCPU extends CPU {
     @Override
     public Entities getWIWWithCounters(Entities wiw) throws Exception {
         Entities wiwWithCounters = wiw.safeClone();
-        Entity entity = wiwWithCounters.get(0);
+        Entity entity = wiwWithCounters.getSubs().get(0);
 
         HashMap<Integer, BigInteger> currentTimestampCtrs = new HashMap<Integer, BigInteger>();
         ArrayList<Integer> updatedOldTimestampCtrs = new ArrayList<Integer>(); //Holds the physical cores
