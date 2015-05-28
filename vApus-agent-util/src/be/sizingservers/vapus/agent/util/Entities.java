@@ -6,15 +6,47 @@
  */
 package be.sizingservers.vapus.agent.util;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 
 /**
  *
  * @author didjeeh
  */
-public class Entities extends ArrayList<Entity> {
+public class Entities implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    
+    private long timestamp;
+    private ArrayList<Entity> subs;
+    
+    /**
+     * Sets the timestamp to the current date and time.
+     */
+    public void setTimestamp(){
+        this.timestamp = new Date().getTime();
+    }
+    
+    /**
+     * Returns the seconds from epoch (1970/1/1). Do not forget to set it first.
+     * @return 
+     */
+    public long getTimestamp(){
+        return this.timestamp;
+    }
+    
+        /**
+     * Initiates the internal ArrayList if it is null.
+     *
+     * @return
+     */
+    public ArrayList<Entity> getSubs() {
+        if (this.subs == null) { //Null kvps are not serialized == cleaner output.
+            this.subs = new ArrayList<Entity>();
+        }
+        return this.subs;
+    }
 
     /**
      * Match the name and the Entities if any with the given Entities. The order
@@ -26,14 +58,14 @@ public class Entities extends ArrayList<Entity> {
      * @return
      */
     public boolean match(Entities entities, boolean matchCounters) {
-        boolean match = super.size() == entities.size();
+        boolean match = getSubs().size() == entities.getSubs().size();
         if (match) {
-            int size = super.size();
+            int size = this.subs.size();
             ArrayList<Integer> matched = new ArrayList<Integer>();
             for (int i = 0; i != size; i++) {
-                Entity entity = super.get(i);
+                Entity entity = this.subs.get(i);
                 for (int j = 0; j != size; j++) {
-                    if (!matched.contains(j) && entity.match(entities.get(i), matchCounters)) {
+                    if (!matched.contains(j) && entity.match(entities.subs.get(i), matchCounters)) {
                         matched.add(j);
                     }
                 }
@@ -54,7 +86,7 @@ public class Entities extends ArrayList<Entity> {
      */
     public ArrayList<String> getCountersLastLevel() throws Exception {
         int level = getLevelCount() - 1;
-        if (level < 1 && !super.get(0).isAvailable()) {
+        if (level < 1 && !getSubs().get(0).isAvailable()) {
             return new ArrayList<String>();
         }
 
@@ -104,8 +136,8 @@ public class Entities extends ArrayList<Entity> {
      * @throws java.lang.Exception
      */
     public void setCounters(Entities entities) throws Exception {
-        for (int i = 0; i != super.size(); i++) {
-            Entity to = super.get(i);
+        for (int i = 0; i != getSubs().size(); i++) {
+            Entity to = this.subs.get(i);
             Entity from = entities.getEntity(to.getName());
 
             to.setCounters(from);
@@ -118,8 +150,8 @@ public class Entities extends ArrayList<Entity> {
      * @return
      */
     public Entity getEntity(String name) {
-        for (int i = 0; i != super.size(); i++) {
-            Entity entity = super.get(i);
+        for (int i = 0; i != getSubs().size(); i++) {
+            Entity entity = this.subs.get(i);
             if (entity.getName().equals(name)) {
                 return entity;
             }
@@ -184,9 +216,9 @@ public class Entities extends ArrayList<Entity> {
         ArrayList<CounterInfo> counterInfos = new ArrayList<CounterInfo>();
 
         --level;
-        for (int i = 0; i != super.size(); i++) {
-            ArrayList<CounterInfo> subCounterInfos = super.get(i).getCounterInfos(level);
-            if (super.get(i).isAvailable() && subCounterInfos.isEmpty()) {
+        for (int i = 0; i != getSubs().size(); i++) {
+            ArrayList<CounterInfo> subCounterInfos = this.subs.get(i).getCounterInfos(level);
+            if (this.subs.get(i).isAvailable() && subCounterInfos.isEmpty()) {
                 throw new NullPointerException("CounterInfos does not exist at the given level (" + givenLevel + ").");
             } else {
                 counterInfos.addAll(subCounterInfos);
@@ -202,9 +234,9 @@ public class Entities extends ArrayList<Entity> {
      */
     public int getLevelCount() {
         int levelCount = 0;
-        if (!super.isEmpty()) {
+        if (!getSubs().isEmpty()) {
             levelCount = 1;
-            levelCount += super.get(0).getLevelCount();
+            levelCount += this.subs.get(0).getLevelCount();
         }
         return levelCount;
     }
@@ -215,9 +247,9 @@ public class Entities extends ArrayList<Entity> {
      * @return
      */
     public int getDeepCount() {
-        int deepCount = super.size();
-        for (int i = 0; i != super.size(); i++) {
-            deepCount += super.get(i).getDeepCount();
+        int deepCount = getSubs().size();
+        for (int i = 0; i != this.subs.size(); i++) {
+            deepCount += this.subs.get(i).getDeepCount();
         }
         return deepCount;
     }
@@ -277,8 +309,8 @@ public class Entities extends ArrayList<Entity> {
      */
     public boolean hasDuplicateNames() {
         ArrayList<String> names = new ArrayList<String>();
-        for (int i = 0; i != super.size(); i++) {
-            Entity entity = super.get(i);
+        for (int i = 0; i != getSubs().size(); i++) {
+            Entity entity = this.subs.get(i);
             if (names.contains(entity.getName())) {
                 return true;
             }
@@ -298,8 +330,8 @@ public class Entities extends ArrayList<Entity> {
      */
     public Entities safeClone() {
         Entities clone = new Entities();
-        for (int i = 0; i != super.size(); i++) {
-            clone.add(super.get(i).safeClone());
+        for (int i = 0; i != getSubs().size(); i++) {
+            clone.getSubs().add(this.subs.get(i).safeClone());
         }
         return clone;
     }

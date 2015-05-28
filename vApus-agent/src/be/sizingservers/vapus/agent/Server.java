@@ -291,7 +291,7 @@ public abstract class Server {
                             Agent.getLogger().log(Level.SEVERE, "Failed closing the socket: {0}", ex1);
                         }
                         return;
-                    } else if (message.startsWith("[{\"name\":\"")) {
+                    } else if (message.startsWith("{\"timestamp\":")) {
                         this.monitor.setWIW(message);
                         message = "200";
                     } else {

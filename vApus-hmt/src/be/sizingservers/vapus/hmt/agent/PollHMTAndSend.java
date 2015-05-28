@@ -36,7 +36,10 @@ public class PollHMTAndSend extends TimerTask {
     @Override
     public void run() {
         try {
-            this.server.send(new Gson().toJson(this.cpu.getWIWWithCounters(this.wiwEntities)), this.socket);
+            Entities wiwWithCounters = this.cpu.getWIWWithCounters(this.wiwEntities);
+            wiwWithCounters.setTimestamp();
+       
+            this.server.send(new Gson().toJson(wiwWithCounters), this.socket);
         } catch (Exception ex) {
             Agent.getLogger().log(Level.SEVERE, "Failed sending counters (stopping the timer task now): {0}", ex);
             super.cancel();

@@ -95,7 +95,7 @@ public class Test extends Thread {
                 System.out.println("Test " + this.id + " Reading and parsing counters 3 times...");
             }
             for (int i = 0; i != 3; i++) {
-                parseCounters(read(in, "[{\"name\":\"entity\",\"isAvailable\":true,\"subs\":[{\"name\":\"header\",\"subs\":..."));
+                parseCounters(read(in, "{\"timestamp\":0,\"subs\":[{\name\:\"entity\",\"isAvailable\":true,\"subs\":[{\"name\":\"header\",\"subs\":..."));
             }
 
             writeRead(out, "stop", in);
@@ -158,8 +158,8 @@ public class Test extends Thread {
             this.wiwEntities = new Entities();
 
             boolean hasAvailableEntities = false;
-            for (int i = 0; i != entities.size(); i++) {
-                if (entities.get(i).isAvailable()) {
+            for (int i = 0; i != entities.getSubs().size(); i++) {
+                if (entities.getSubs().get(i).isAvailable()) {
                     hasAvailableEntities = true;
                     break;
                 }
@@ -169,16 +169,16 @@ public class Test extends Thread {
                 boolean addedOne = false;
                 // Add minimum one, otherwise parsing the values can go wrong if headers are missing at the last level.
                 while (!addedOne) {
-                    for (int i = 0; i != entities.size(); i++) {
+                    for (int i = 0; i != entities.getSubs().size(); i++) {
                         //Random seed, otherwise System.currentTimeMillis() is used and I do not want to let the thread sleep.
                         Random random = new Random(UUID.randomUUID().hashCode());
                         if (random.nextBoolean()) {
-                            Entity entity = entities.get(i);
+                            Entity entity = entities.getSubs().get(i);
                             if (entity.isAvailable()) {
                                 addedOne = true;
                                 
                                 Entity newEntity = new Entity(entity.getName(), entity.isAvailable());
-                                this.wiwEntities.add(newEntity);
+                                this.wiwEntities.getSubs().add(newEntity);
 
                                 chanceCopySubs(entity, newEntity);
                             }
@@ -255,7 +255,7 @@ public class Test extends Thread {
         }
 
         if (entities.getDeepCount() != this.wiwEntities.getDeepCount()) {
-            throw new Exception("The number of counters (" + entities.size() + ") is not equal to the number of CounterInfos (" + wiwEntities.size() + ").");
+            throw new Exception("The number of counters (" + entities.getSubs().size() + ") is not equal to the number of CounterInfos (" + wiwEntities.getSubs().size() + ").");
         }
 
         ArrayList<String> parsedCounters = new ArrayList<String>();
