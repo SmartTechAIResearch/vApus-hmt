@@ -95,7 +95,7 @@ public class Test extends Thread {
                 System.out.println("Test " + this.id + " Reading and parsing counters 3 times...");
             }
             for (int i = 0; i != 3; i++) {
-                parseCounters(read(in, "{\"timestamp\":0,\"subs\":[{\name\:\"entity\",\"isAvailable\":true,\"subs\":[{\"name\":\"header\",\"subs\":..."));
+                parseCounters(read(in, "{\"timestamp\":0,\"subs\":[{\"name\":\"entity\",\"isAvailable\":true,\"subs\":[{\"name\":\"header\",\"subs\":..."));
             }
 
             writeRead(out, "stop", in);
