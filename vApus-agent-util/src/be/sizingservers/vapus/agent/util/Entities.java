@@ -29,7 +29,7 @@ public class Entities implements Serializable {
     }
     
     /**
-     * Returns the seconds from epoch (1970/1/1). Do not forget to set it first.
+     * Returns the milliseconds since epoch (1970/1/1). Do not forget to set it first.
      * @return 
      */
     public long getTimestamp(){
