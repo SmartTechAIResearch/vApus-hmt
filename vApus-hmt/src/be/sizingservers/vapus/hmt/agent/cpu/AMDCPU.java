@@ -108,7 +108,7 @@ public class AMDCPU extends CPU {
                 }
             }
 
-            super.wih.add(entity);
+            super.wih.getSubs().add(entity);
         }
         return super.wih;
     }
@@ -116,7 +116,7 @@ public class AMDCPU extends CPU {
     @Override
     public Entities getWIWWithCounters(Entities wiw) throws Exception {
         Entities wiwWithCounters = wiw.safeClone();
-        Entity entity = wiwWithCounters.get(0);
+        Entity entity = wiwWithCounters.getSubs().get(0);
 
         //NOTE: simple trick of today (27/02/2013) is that AMD has max 8 'logical' cores per node, so when we have 32 logical cpu's we have 4 nodes with each one having a temperature sensor
         //Per package there is only 1 power sensor.
