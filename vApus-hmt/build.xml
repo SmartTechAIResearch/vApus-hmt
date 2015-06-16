@@ -21,7 +21,9 @@
         <copy file="src/daemon/start-as-daemon.sh" flatten="true" todir="${dist.dir}"/>
         <copy file="src/daemon/stop-daemon.sh" flatten="true" todir="${dist.dir}"/>
         <copy file="src/start.cmd" flatten="true" todir="${dist.dir}"/>
-        <echo file="${dist.dir}/README.txt">It is possible that the agent fails the first time. This because of driver initialisation.            
+        <copy file="src/nssm/NSSMREADME.txt" flatten="true" todir="${dist.dir}"/>
+        <copy file="src/nssm/nssm.exe" flatten="true" todir="${dist.dir}"/>
+        <echo file="${dist.dir}/README.txt">It is possible that the agent fails the first time. This because of driver initialisation. This agent will not work (correctly) for VMs.           
 Dependencies:
 ### Linux
 * root privileges
