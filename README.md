@@ -1,4 +1,4 @@
-vApus hardware monitor tool for Windows and Linux is able to read CPU specific counters (C states, P states, ...) for modern (starting from Nehalem) Intel CPUs.
+vApus hardware monitor tool for Windows and Linux is able to read CPU specific counters (C states, P states, ...) for modern (starting from Nehalem, to 2014-2015) Intel CPUs.
 
 AMD is supported from Magny-Cours, but not all counters are available due to lacking information in the BKDGs.
 
